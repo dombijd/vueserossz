@@ -15,6 +15,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // 2. SERVICES (Dependency Injection)
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<ICompanyService, CompanyService>();
 // TODO: További service-ek regisztrációja késõbb (DocumentService, stb.)
 
 // 3. JWT AUTHENTICATION
