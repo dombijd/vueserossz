@@ -133,3 +133,5 @@ appsettings.Local.json
 # Backup files
 *.bak
 *.tmp
+
+*.pdf

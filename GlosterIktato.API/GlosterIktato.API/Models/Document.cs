@@ -3,14 +3,24 @@
     public class Document
     {
         public int Id { get; set; }
-        public string RegistrationNumber { get; set; } = string.Empty;
-        public string FileName { get; set; } = string.Empty;
-        public string OriginalFileName { get; set; } = string.Empty;
-        public string FilePath { get; set; } = string.Empty;
-        public string Status { get; set; } = "Vázlat";
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime? ModifiedAt { get; set; }
 
+        // Alapadatok
+        public string ArchiveNumber { get; set; } = string.Empty; // Iktatószám (GeneratedRegistrationNumber helyett)
+        public string OriginalFileName { get; set; } = string.Empty;
+        public string StoragePath { get; set; } = string.Empty; // SharePoint path
+
+        // Státusz és workflow
+        public string Status { get; set; } = "Draft"; // Draft, PendingApproval, Accountant, Done, Rejected
+
+        // Számla specifikus mezők (nullable, mert TIG/Szerződés/Egyéb nem használja)
+        public string? InvoiceNumber { get; set; }
+        public DateTime? IssueDate { get; set; }
+        public DateTime? PerformanceDate { get; set; }
+        public DateTime? PaymentDeadline { get; set; }
+        public decimal? GrossAmount { get; set; }
+        public string? Currency { get; set; } // HUF, EUR, USD
+
+        // Kapcsolatok
         public int CompanyId { get; set; }
         public Company Company { get; set; } = null!;
 
@@ -20,10 +30,21 @@
         public int? SupplierId { get; set; }
         public Supplier? Supplier { get; set; }
 
+        // Workflow
         public int CreatedByUserId { get; set; }
         public User CreatedBy { get; set; } = null!;
 
         public int? AssignedToUserId { get; set; }
         public User? AssignedTo { get; set; }
+
+        public int? ModifiedByUserId { get; set; }
+        public User? ModifiedBy { get; set; }
+
+        // Időbélyegek
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        public DateTime? ModifiedAt { get; set; }
+
+        // Navigációs propertyк
+        public ICollection<DocumentHistory> History { get; set; } = new List<DocumentHistory>();
     }
 }
