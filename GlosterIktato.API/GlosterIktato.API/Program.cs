@@ -17,6 +17,8 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
 builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IArchiveNumberService, ArchiveNumberService>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
 // TODO: További service-ek regisztrációja késõbb (DocumentService, stb.)
 
 // 3. JWT AUTHENTICATION
