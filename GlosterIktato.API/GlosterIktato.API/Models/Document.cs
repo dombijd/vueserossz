@@ -20,6 +20,12 @@
         public decimal? GrossAmount { get; set; }
         public string? Currency { get; set; } // HUF, EUR, USD
 
+        // Dataxo integráció
+        public string? DataxoTransactionId { get; set; }
+        public string? DataxoStatus { get; set; } // null, Processing, Success, Failed
+        public DateTime? DataxoSubmittedAt { get; set; }
+        public DateTime? DataxoCompletedAt { get; set; }
+
         // Kapcsolatok
         public int CompanyId { get; set; }
         public Company Company { get; set; } = null!;

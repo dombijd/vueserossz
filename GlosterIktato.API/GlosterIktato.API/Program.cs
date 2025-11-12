@@ -1,3 +1,4 @@
+Ôªøusing GlosterIktato.API.BackgroundServices;
 using GlosterIktato.API.Data;
 using GlosterIktato.API.Services;
 using GlosterIktato.API.Services.Interfaces;
@@ -12,7 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. SERVICES (Dependency Injection)
+// 2. HTTP CLIENT (Dataxo sz√°m√°ra)
+builder.Services.AddHttpClient("DataxoClient", client =>
+{
+    var baseUrl = builder.Configuration["Dataxo:BaseUrl"] ?? "https://api.dataxo.example.com";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// 3. SERVICES (Dependency Injection)
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
@@ -20,9 +29,12 @@ builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IArchiveNumberService, ArchiveNumberService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
-// TODO: Tov·bbi service-ek regisztr·ciÛja kÈsıbb (DocumentService, stb.)
+builder.Services.AddScoped<IDataxoService, DataxoService>(); // √öJ: Dataxo integr√°ci√≥
 
-// 3. JWT AUTHENTICATION
+// 4. BACKGROUND SERVICES
+builder.Services.AddHostedService<DataxoPollingService>(); // √öJ: 30 sec-es polling
+
+// 5. JWT AUTHENTICATION
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]
     ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
@@ -35,7 +47,7 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; // Dev kˆrnyezetben false, prod-ban true!
+    options.RequireHttpsMetadata = false; // Dev k√∂rnyezetben false, prod-ban true!
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -45,13 +57,13 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-        ClockSkew = TimeSpan.Zero // Token azonnal lej·r az expiry idıpontban
+        ClockSkew = TimeSpan.Zero // Token azonnal lej√°r az expiry id√µpontban
     };
 });
 
 builder.Services.AddAuthorization();
 
-// 4. CORS
+// 6. CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVueApp",
@@ -62,7 +74,7 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
-// 5. CONTROLLERS & SWAGGER
+// 7. CONTROLLERS & SWAGGER
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -97,7 +109,7 @@ builder.Services.AddSwaggerGen(options =>
 // BUILD APP
 var app = builder.Build();
 
-// 6. SEED DATA (csak dev kˆrnyezetben)
+// 8. SEED DATA (csak dev k√∂rnyezetben)
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
@@ -106,12 +118,12 @@ if (app.Environment.IsDevelopment())
 
     try
     {
-        // Migration futtat·sa automatikusan
+        // Migration futtat√°sa automatikusan
         logger.LogInformation("Running database migrations...");
         await context.Database.MigrateAsync();
         logger.LogInformation("Migrations completed");
 
-        // Seed data futtat·sa
+        // Seed data futtat√°sa
         logger.LogInformation("Seeding database...");
         await DbSeeder.SeedAsync(context);
         logger.LogInformation("Database seeded successfully");
@@ -122,25 +134,25 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// 7. MIDDLEWARE PIPELINE
+// 9. MIDDLEWARE PIPELINE
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Gloster IktatÛ API v1");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Gloster Iktat√≥ API v1");
         options.RoutePrefix = "swagger"; // URL: /swagger
     });
 }
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowVueApp"); // CORS elıbb mint Auth!
+app.UseCors("AllowVueApp"); // CORS el√µbb mint Auth!
 
-app.UseAuthentication(); // Authentication elıbb mint Authorization
+app.UseAuthentication(); // Authentication el√µbb mint Authorization
 app.UseAuthorization();
 
 app.MapControllers();
 
-// 8. RUN
+// 10. RUN
 app.Run();
