@@ -22,8 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Uploads\Documents\" />
-    <Folder Include="Uploads\Temp\" />
+    <Folder Include="Storage\Documents\" />
   </ItemGroup>
 
 </Project>

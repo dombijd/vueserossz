@@ -76,5 +76,58 @@ namespace GlosterIktato.API.Controllers
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(userIdClaim, out int userId) ? userId : 0;
         }
+
+        /// <summary>
+        /// Dokumentum adatainak módosítása
+        /// </summary>
+        [HttpPut("{id}")]
+        [ProducesResponseType(typeof(DocumentDetailDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> UpdateDocument(int id, [FromBody] DocumentUpdateDto dto)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == 0)
+                return Unauthorized();
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var result = await _documentService.UpdateDocumentAsync(id, dto, userId);
+
+            if (result == null)
+                return NotFound(new { message = "Dokumentum nem található vagy nincs jogosultságod a szerkesztéshez" });
+
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Dokumentum PDF letöltése
+        /// </summary>
+        [HttpGet("{id}/download")]
+        [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        public async Task<IActionResult> DownloadDocument(int id)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == 0)
+                return Unauthorized();
+
+            // Get document details for filename
+            var document = await _documentService.GetDocumentByIdAsync(id, userId);
+            if (document == null)
+                return NotFound(new { message = "Dokumentum nem található vagy nincs hozzáférésed" });
+
+            // Download file stream
+            var fileStream = await _documentService.DownloadDocumentAsync(id, userId);
+            if (fileStream == null)
+                return NotFound(new { message = "Fájl nem található" });
+
+            // Return file with original filename
+            return File(fileStream, "application/pdf", document.OriginalFileName);
+        }
+
     }
 }

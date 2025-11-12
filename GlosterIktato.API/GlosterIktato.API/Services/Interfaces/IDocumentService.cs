@@ -7,5 +7,7 @@ namespace GlosterIktato.API.Services.Interfaces
         Task<DocumentResponseDto?> UploadDocumentAsync(DocumentUploadDto dto, int currentUserId);
         Task<List<DocumentResponseDto>> GetMyTasksAsync(int currentUserId);
         Task<DocumentDetailDto?> GetDocumentByIdAsync(int documentId, int currentUserId);
+        Task<DocumentDetailDto?> UpdateDocumentAsync(int documentId, DocumentUpdateDto dto, int currentUserId);
+        Task<Stream?> DownloadDocumentAsync(int documentId, int currentUserId);
     }
 }

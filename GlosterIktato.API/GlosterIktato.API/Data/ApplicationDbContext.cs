@@ -16,6 +16,7 @@ namespace GlosterIktato.API.Data
         public DbSet<DocumentType> DocumentTypes { get; set; }
         public DbSet<Document> Documents { get; set; }
         public DbSet<DocumentHistory> DocumentHistories { get; set; }
+        public DbSet<DocumentComment> DocumentComments { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<UserCompany> UserCompanies { get; set; }
@@ -82,6 +83,18 @@ namespace GlosterIktato.API.Data
                 .HasForeignKey(dh => dh.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<DocumentComment>()
+                .HasOne(dc => dc.Document)
+                .WithMany()
+                .HasForeignKey(dc => dc.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade); // Document törléskor Comments is törlődik
+
+            modelBuilder.Entity<DocumentComment>()
+                .HasOne(dc => dc.User)
+                .WithMany()
+                .HasForeignKey(dc => dc.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // INDEXEK (Performance optimalizálás)
 
             modelBuilder.Entity<Document>()
@@ -99,6 +112,9 @@ namespace GlosterIktato.API.Data
 
             modelBuilder.Entity<DocumentHistory>()
                 .HasIndex(dh => new { dh.DocumentId, dh.CreatedAt });
+
+            modelBuilder.Entity<DocumentComment>()
+                .HasIndex(dc => new { dc.DocumentId, dc.CreatedAt });
         }
     }
 }

@@ -135,3 +135,4 @@ appsettings.Local.json
 *.tmp
 
 *.pdf
+Storage/
