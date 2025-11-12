@@ -21,7 +21,19 @@ builder.Services.AddHttpClient("DataxoClient", client =>
     client.Timeout = TimeSpan.FromSeconds(30);
 });
 
-// 3. SERVICES (Dependency Injection)
+// HTTP CLIENT (Business Central számára)
+builder.Services.AddHttpClient("BusinessCentralClient", client =>
+{
+    var baseUrl = builder.Configuration["BusinessCentral:BaseUrl"] ?? "https://api.businesscentral.dynamics.com";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+    // TODO: Add OAuth authentication header in production
+});
+
+// 3. MEMORY CACHE (BC master data cache-eléshez)
+builder.Services.AddMemoryCache();
+
+// 4. SERVICES (Dependency Injection)
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ISupplierService, SupplierService>();
@@ -29,12 +41,13 @@ builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IArchiveNumberService, ArchiveNumberService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
-builder.Services.AddScoped<IDataxoService, DataxoService>(); // ÚJ: Dataxo integráció
+builder.Services.AddScoped<IDataxoService, DataxoService>(); // Dataxo integráció
+builder.Services.AddScoped<IBusinessCentralService, BusinessCentralService>(); // ÚJ: BC integráció
 
-// 4. BACKGROUND SERVICES
-builder.Services.AddHostedService<DataxoPollingService>(); // ÚJ: 30 sec-es polling
+// 5. BACKGROUND SERVICES
+builder.Services.AddHostedService<DataxoPollingService>(); // 30 sec-es polling
 
-// 5. JWT AUTHENTICATION
+// 6. JWT AUTHENTICATION
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]
     ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
@@ -63,7 +76,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// 6. CORS
+// 7. CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVueApp",
@@ -74,7 +87,7 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
-// 7. CONTROLLERS & SWAGGER
+// 8. CONTROLLERS & SWAGGER
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -109,7 +122,7 @@ builder.Services.AddSwaggerGen(options =>
 // BUILD APP
 var app = builder.Build();
 
-// 8. SEED DATA (csak dev környezetben)
+// 9. SEED DATA (csak dev környezetben)
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
@@ -134,7 +147,7 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// 9. MIDDLEWARE PIPELINE
+// 10. MIDDLEWARE PIPELINE
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -154,5 +167,5 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// 10. RUN
+// 11. RUN
 app.Run();

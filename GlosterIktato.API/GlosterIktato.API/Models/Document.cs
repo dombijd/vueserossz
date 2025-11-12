@@ -26,6 +26,18 @@
         public DateTime? DataxoSubmittedAt { get; set; }
         public DateTime? DataxoCompletedAt { get; set; }
 
+        // Business Central integráció
+        public string? BcInvoiceId { get; set; }
+        public DateTime? BcPushedAt { get; set; }
+        public string? BcStatus { get; set; } // null, Pending, Success, Failed
+
+        // BC Master data (kategorizálás)
+        public string? CostCenter { get; set; }
+        public string? GptCode { get; set; }
+        public string? BusinessUnit { get; set; }
+        public string? Project { get; set; }
+        public string? Employee { get; set; }
+
         // Kapcsolatok
         public int CompanyId { get; set; }
         public Company Company { get; set; } = null!;
