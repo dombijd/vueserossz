@@ -41,8 +41,9 @@ builder.Services.AddScoped<ICompanyService, CompanyService>();
 builder.Services.AddScoped<IArchiveNumberService, ArchiveNumberService>();
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
-builder.Services.AddScoped<IDataxoService, DataxoService>(); // Dataxo integráció
-builder.Services.AddScoped<IBusinessCentralService, BusinessCentralService>(); // ÚJ: BC integráció
+builder.Services.AddScoped<IDataxoService, DataxoService>();
+builder.Services.AddScoped<IBusinessCentralService, BusinessCentralService>();
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
 
 // 5. BACKGROUND SERVICES
 builder.Services.AddHostedService<DataxoPollingService>(); // 30 sec-es polling
