@@ -64,6 +64,22 @@ builder.Services.AddAuthentication(options =>
 {
     options.SaveToken = true;
     options.RequireHttpsMetadata = false; // Dev környezetben false, prod-ban true!
+    
+    // Don't process OPTIONS requests (CORS preflight)
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // Skip authentication for OPTIONS requests (CORS preflight)
+            if (context.Request.Method == "OPTIONS")
+            {
+                context.NoResult();
+                return Task.CompletedTask;
+            }
+            return Task.CompletedTask;
+        }
+    };
+    
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -91,7 +107,13 @@ builder.Services.AddCors(options =>
 });
 
 // 8. CONTROLLERS & SWAGGER
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Ensure camelCase JSON serialization for frontend compatibility
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.WriteIndented = false;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -151,6 +173,21 @@ if (app.Environment.IsDevelopment())
 }
 
 // 10. MIDDLEWARE PIPELINE
+// CORS MUST be first to handle preflight requests before any redirects
+app.UseCors("AllowVueApp");
+
+// Handle OPTIONS requests explicitly (CORS preflight)
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == "OPTIONS")
+    {
+        context.Response.StatusCode = 200;
+        await context.Response.CompleteAsync();
+        return;
+    }
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -161,9 +198,12 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.UseHttpsRedirection();
-
-app.UseCors("AllowVueApp"); // CORS elõbb mint Auth!
+// Only use HTTPS redirection in production
+// Note: HTTPS redirection must come AFTER CORS to avoid redirecting preflight requests
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseAuthentication(); // Authentication elõbb mint Authorization
 app.UseAuthorization();

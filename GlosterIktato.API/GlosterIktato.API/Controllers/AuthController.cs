@@ -27,21 +27,34 @@ namespace GlosterIktato.API.Controllers
         [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginRequestDto request)
         {
+            if (request == null)
+            {
+                return BadRequest(new { message = "Email és jelszó megadása kötelező" });
+            }
+
             if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Password))
             {
                 return BadRequest(new { message = "Email és jelszó megadása kötelező" });
             }
 
-            var response = await _authService.LoginAsync(request);
-
-            if (response == null)
+            try
             {
-                return Unauthorized(new { message = "Hibás email vagy jelszó" });
+                var response = await _authService.LoginAsync(request);
+
+                if (response == null)
+                {
+                    return Unauthorized(new { message = "Hibás email vagy jelszó" });
+                }
+
+                _logger.LogInformation("User logged in successfully: {Email}", request.Email);
+
+                return Ok(response);
             }
-
-            _logger.LogInformation("User logged in successfully: {Email}", request.Email);
-
-            return Ok(response);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during login for email: {Email}", request.Email);
+                return StatusCode(500, new { message = "Hiba történt a bejelentkezés során" });
+            }
         }
 
         /// <summary>
