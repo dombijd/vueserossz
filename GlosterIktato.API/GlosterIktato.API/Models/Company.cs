@@ -1,6 +1,4 @@
-﻿using System.Reflection.Metadata;
-
-namespace GlosterIktato.API.Models
+﻿namespace GlosterIktato.API.Models
 {
     public class Company
     {
@@ -11,7 +9,8 @@ namespace GlosterIktato.API.Models
         public bool IsActive { get; set; } = true;
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        public ICollection<User> Users { get; set; } = new List<User>();
+        // Many-to-many kapcsolat a felhasználókkal
+        public ICollection<UserCompany> UserCompanies { get; set; } = new List<UserCompany>();
         public ICollection<Document> Documents { get; set; } = new List<Document>();
     }
 }
