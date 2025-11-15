@@ -1,0 +1,587 @@
+﻿using GlosterIktato.API.Data;
+using GlosterIktato.API.DTOs.Documents;
+using GlosterIktato.API.Models;
+using GlosterIktato.API.Services.Interfaces;
+using Microsoft.EntityFrameworkCore;
+
+namespace GlosterIktato.API.Services
+{
+    public class DocumentService : IDocumentService
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly IArchiveNumberService _archiveNumberService;
+        private readonly IConfiguration _configuration;
+        private readonly ILogger<DocumentService> _logger;
+        private readonly IFileStorageService _fileStorageService;
+
+        public DocumentService(
+            ApplicationDbContext context,
+            IArchiveNumberService archiveNumberService,
+            IConfiguration configuration,
+            IFileStorageService fileStorageService,
+            ILogger<DocumentService> logger)
+        {
+            _context = context;
+            _archiveNumberService = archiveNumberService;
+            _configuration = configuration;
+            _fileStorageService = fileStorageService;
+            _logger = logger;
+
+        }
+
+        /// <summary>
+        /// Dokumentum feltöltése (FileStorageService-szel)
+        /// </summary>
+        public async Task<DocumentResponseDto?> UploadDocumentAsync(DocumentUploadDto dto, int currentUserId)
+        {
+            try
+            {
+                // 1. Validációk
+                if (dto.File == null || dto.File.Length == 0)
+                {
+                    _logger.LogWarning("Upload failed: Empty file");
+                    return null;
+                }
+
+                // PDF ellenőrzés
+                if (!dto.File.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase))
+                {
+                    _logger.LogWarning("Upload failed: Not a PDF file");
+                    return null;
+                }
+
+                // Max file size: 50 MB
+                const long maxFileSize = 50 * 1024 * 1024;
+                if (dto.File.Length > maxFileSize)
+                {
+                    _logger.LogWarning("Upload failed: File too large ({Size} bytes)", dto.File.Length);
+                    return null;
+                }
+
+                // User permission check
+                var userHasCompanyAccess = await _context.UserCompanies
+                    .AnyAsync(uc => uc.UserId == currentUserId && uc.CompanyId == dto.CompanyId);
+
+                if (!userHasCompanyAccess)
+                {
+                    _logger.LogWarning("Upload failed: User {UserId} has no access to Company {CompanyId}",
+                        currentUserId, dto.CompanyId);
+                    return null;
+                }
+
+                // 2. Iktatószám generálás
+                var archiveNumber = await _archiveNumberService.GenerateArchiveNumberAsync(
+                    dto.CompanyId,
+                    dto.DocumentTypeId);
+
+                // 3. Company és DocumentType lekérése (file storage path-hez)
+                var company = await _context.Companies.FindAsync(dto.CompanyId);
+                var docType = await _context.DocumentTypes.FindAsync(dto.DocumentTypeId);
+
+                if (company == null || docType == null)
+                {
+                    _logger.LogError("Company or DocumentType not found");
+                    return null;
+                }
+
+                // 4. Fájl feltöltése FileStorageService-en keresztül
+                var fileName = $"{archiveNumber}.pdf";
+                string storagePath;
+
+                using (var stream = dto.File.OpenReadStream())
+                {
+                    storagePath = await _fileStorageService.UploadFileAsync(
+                        stream,
+                        company.Name,
+                        "Temp", // Supplier name később lesz, egyelőre Temp mappába
+                        fileName
+                    );
+                }
+
+                // 5. Document létrehozása DB-ben
+                var document = new Document
+                {
+                    ArchiveNumber = archiveNumber,
+                    OriginalFileName = dto.File.FileName,
+                    StoragePath = storagePath, // FileStorageService által visszaadott path
+                    Status = "Draft",
+                    CompanyId = dto.CompanyId,
+                    DocumentTypeId = dto.DocumentTypeId,
+                    CreatedByUserId = currentUserId,
+                    AssignedToUserId = currentUserId,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Documents.Add(document);
+                await _context.SaveChangesAsync();
+
+                // 6. History bejegyzés
+                var history = new DocumentHistory
+                {
+                    DocumentId = document.Id,
+                    UserId = currentUserId,
+                    Action = "Created",
+                    Comment = "Dokumentum feltöltve",
+                    CreatedAt = DateTime.UtcNow
+                };
+                _context.DocumentHistories.Add(history);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Document uploaded successfully: {ArchiveNumber}", archiveNumber);
+
+                return await GetDocumentResponseDto(document.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error uploading document");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Aktuális ügyeim - hozzám rendelt vagy általam létrehozott dokumentumok
+        /// </summary>
+        public async Task<List<DocumentResponseDto>> GetMyTasksAsync(int currentUserId)
+        {
+            try
+            {
+                var documents = await _context.Documents
+                    .Include(d => d.Company)
+                    .Include(d => d.DocumentType)
+                    .Include(d => d.Supplier)
+                    .Include(d => d.CreatedBy)
+                    .Include(d => d.AssignedTo)
+                    .Where(d => d.AssignedToUserId == currentUserId || d.CreatedByUserId == currentUserId)
+                    .Where(d => d.Status != "Rejected") // Elutasított dokumentumok kihagyása
+                    .OrderByDescending(d => d.CreatedAt)
+                    .ToListAsync();
+
+                return documents.Select(d => MapToResponseDto(d)).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching my tasks for user {UserId}", currentUserId);
+                return new List<DocumentResponseDto>();
+            }
+        }
+
+        /// <summary>
+        /// Dokumentum részletes adatai
+        /// </summary>
+        public async Task<DocumentDetailDto?> GetDocumentByIdAsync(int documentId, int currentUserId)
+        {
+            try
+            {
+                var document = await _context.Documents
+                    .Include(d => d.Company)
+                    .Include(d => d.DocumentType)
+                    .Include(d => d.Supplier)
+                    .Include(d => d.CreatedBy)
+                    .Include(d => d.AssignedTo)
+                    .Include(d => d.History)
+                        .ThenInclude(h => h.User)
+                    .FirstOrDefaultAsync(d => d.Id == documentId);
+
+                if (document == null)
+                {
+                    _logger.LogWarning("Document not found: {DocumentId}", documentId);
+                    return null;
+                }
+
+                // Jogosultság ellenőrzés
+                if (!await HasAccessToDocumentAsync(document, currentUserId))
+                {
+                    _logger.LogWarning("User {UserId} has no access to document {DocumentId}", currentUserId, documentId);
+                    return null;
+                }
+
+                return MapToDetailDto(document);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching document {DocumentId}", documentId);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Dokumentumok lekérése szűrőkkel és lapozással
+        /// </summary>
+        public async Task<PaginatedResult<DocumentResponseDto>> GetDocumentsAsync(
+            int userId,
+            int? companyId,
+            string? status,
+            int? assignedToUserId,
+            int page,
+            int pageSize)
+        {
+            try
+            {
+                // User hozzáférési jogosultságai
+                var userCompanyIds = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .Select(uc => uc.CompanyId)
+                    .ToListAsync();
+
+                // Base query
+                var query = _context.Documents
+                    .Include(d => d.Company)
+                    .Include(d => d.DocumentType)
+                    .Include(d => d.Supplier)
+                    .Include(d => d.CreatedBy)
+                    .Include(d => d.AssignedTo)
+                    .Where(d => userCompanyIds.Contains(d.CompanyId)) // User csak saját cégeit látja
+                    .AsQueryable();
+
+                // Filter: CompanyId
+                if (companyId.HasValue)
+                {
+                    query = query.Where(d => d.CompanyId == companyId.Value);
+                }
+
+                // Filter: Status
+                if (!string.IsNullOrWhiteSpace(status))
+                {
+                    query = query.Where(d => d.Status == status);
+                }
+
+                // Filter: AssignedToUserId
+                if (assignedToUserId.HasValue)
+                {
+                    query = query.Where(d => d.AssignedToUserId == assignedToUserId.Value);
+                }
+
+                // Total count
+                var totalCount = await query.CountAsync();
+
+                // Pagination
+                var documents = await query
+                    .OrderByDescending(d => d.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                // Map to DTO
+                var documentDtos = documents.Select(d => new DocumentResponseDto
+                {
+                    Id = d.Id,
+                    ArchiveNumber = d.ArchiveNumber,
+                    OriginalFileName = d.OriginalFileName,
+                    Status = d.Status,
+                    InvoiceNumber = d.InvoiceNumber,
+                    IssueDate = d.IssueDate,
+                    PerformanceDate = d.PerformanceDate,
+                    PaymentDeadline = d.PaymentDeadline,
+                    GrossAmount = d.GrossAmount,
+                    Currency = d.Currency,
+                    CompanyId = d.CompanyId,
+                    CompanyName = d.Company.Name,
+                    DocumentTypeId = d.DocumentTypeId,
+                    DocumentTypeName = d.DocumentType.Name,
+                    DocumentTypeCode = d.DocumentType.Code,
+                    SupplierId = d.SupplierId,
+                    SupplierName = d.Supplier?.Name,
+                    CreatedByUserId = d.CreatedByUserId,
+                    CreatedByName = $"{d.CreatedBy.FirstName} {d.CreatedBy.LastName}",
+                    AssignedToUserId = d.AssignedToUserId,
+                    AssignedToName = d.AssignedTo != null ? $"{d.AssignedTo.FirstName} {d.AssignedTo.LastName}" : null,
+                    CreatedAt = d.CreatedAt,
+                    ModifiedAt = d.ModifiedAt
+                }).ToList();
+
+                return new PaginatedResult<DocumentResponseDto>
+                {
+                    Data = documentDtos,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount,
+                    TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting documents for user {UserId}", userId);
+                throw;
+            }
+        }
+
+        // ============================================================
+        // HELPER METÓDUSOK
+        // ============================================================
+
+        private async Task<DocumentResponseDto?> GetDocumentResponseDto(int documentId)
+        {
+            var document = await _context.Documents
+                .Include(d => d.Company)
+                .Include(d => d.DocumentType)
+                .Include(d => d.Supplier)
+                .Include(d => d.CreatedBy)
+                .Include(d => d.AssignedTo)
+                .FirstOrDefaultAsync(d => d.Id == documentId);
+
+            return document == null ? null : MapToResponseDto(document);
+        }
+
+        private DocumentResponseDto MapToResponseDto(Document d)
+        {
+            return new DocumentResponseDto
+            {
+                Id = d.Id,
+                ArchiveNumber = d.ArchiveNumber,
+                OriginalFileName = d.OriginalFileName,
+                Status = d.Status,
+                InvoiceNumber = d.InvoiceNumber,
+                IssueDate = d.IssueDate,
+                PerformanceDate = d.PerformanceDate,
+                PaymentDeadline = d.PaymentDeadline,
+                GrossAmount = d.GrossAmount,
+                Currency = d.Currency,
+                CompanyId = d.CompanyId,
+                CompanyName = d.Company.Name,
+                DocumentTypeId = d.DocumentTypeId,
+                DocumentTypeName = d.DocumentType.Name,
+                DocumentTypeCode = d.DocumentType.Code,
+                SupplierId = d.SupplierId,
+                SupplierName = d.Supplier?.Name,
+                CreatedByUserId = d.CreatedByUserId,
+                CreatedByName = $"{d.CreatedBy.FirstName} {d.CreatedBy.LastName}",
+                AssignedToUserId = d.AssignedToUserId,
+                AssignedToName = d.AssignedTo != null ? $"{d.AssignedTo.FirstName} {d.AssignedTo.LastName}" : null,
+                CreatedAt = d.CreatedAt,
+                ModifiedAt = d.ModifiedAt
+            };
+        }
+
+        private DocumentDetailDto MapToDetailDto(Document d)
+        {
+            return new DocumentDetailDto
+            {
+                Id = d.Id,
+                ArchiveNumber = d.ArchiveNumber,
+                OriginalFileName = d.OriginalFileName,
+                StoragePath = d.StoragePath,
+                Status = d.Status,
+                InvoiceNumber = d.InvoiceNumber,
+                IssueDate = d.IssueDate,
+                PerformanceDate = d.PerformanceDate,
+                PaymentDeadline = d.PaymentDeadline,
+                GrossAmount = d.GrossAmount,
+                Currency = d.Currency,
+                CompanyId = d.CompanyId,
+                CompanyName = d.Company.Name,
+                DocumentTypeId = d.DocumentTypeId,
+                DocumentTypeName = d.DocumentType.Name,
+                DocumentTypeCode = d.DocumentType.Code,
+                SupplierId = d.SupplierId,
+                SupplierName = d.Supplier?.Name,
+                CreatedByUserId = d.CreatedByUserId,
+                CreatedByName = $"{d.CreatedBy.FirstName} {d.CreatedBy.LastName}",
+                AssignedToUserId = d.AssignedToUserId,
+                AssignedToName = d.AssignedTo != null ? $"{d.AssignedTo.FirstName} {d.AssignedTo.LastName}" : null,
+                CreatedAt = d.CreatedAt,
+                ModifiedAt = d.ModifiedAt,
+                History = d.History.OrderBy(h => h.CreatedAt).Select(h => new DocumentHistoryDto
+                {
+                    Id = h.Id,
+                    UserId = h.UserId,
+                    UserName = $"{h.User.FirstName} {h.User.LastName}",
+                    Action = h.Action,
+                    FieldName = h.FieldName,
+                    OldValue = h.OldValue,
+                    NewValue = h.NewValue,
+                    Comment = h.Comment,
+                    CreatedAt = h.CreatedAt
+                }).ToList()
+            };
+        }
+
+        private async Task<bool> HasAccessToDocumentAsync(Document document, int userId)
+        {
+            // User hozzáfér, ha:
+            // 1. Ő hozta létre VAGY
+            // 2. Neki van hozzárendelve VAGY
+            // 3. Ugyanabba a cégbe tartozik (opcionális, szigorúbb szabály esetén törölhető)
+
+            if (document.CreatedByUserId == userId || document.AssignedToUserId == userId)
+                return true;
+
+            // Ellenőrizd, hogy a user hozzáfér-e a dokumentum cégehhez
+            var userHasAccessToCompany = await _context.UserCompanies
+                .AnyAsync(uc => uc.UserId == userId && uc.CompanyId == document.CompanyId);
+
+            return userHasAccessToCompany;
+        }
+
+        /// <summary>
+        /// Dokumentum adatainak módosítása
+        /// </summary>
+        public async Task<DocumentDetailDto?> UpdateDocumentAsync(int documentId, DocumentUpdateDto dto, int currentUserId)
+        {
+            try
+            {
+                var document = await _context.Documents
+                    .Include(d => d.Company)
+                    .Include(d => d.DocumentType)
+                    .Include(d => d.Supplier)
+                    .FirstOrDefaultAsync(d => d.Id == documentId);
+
+                if (document == null)
+                {
+                    _logger.LogWarning("Document not found: {DocumentId}", documentId);
+                    return null;
+                }
+
+                // Jogosultság ellenőrzés
+                if (!await HasAccessToDocumentAsync(document, currentUserId))
+                {
+                    _logger.LogWarning("User {UserId} has no access to update document {DocumentId}", currentUserId, documentId);
+                    return null;
+                }
+
+                // Csak Draft vagy PendingApproval státuszban szerkeszthető
+                if (document.Status != "Draft" && document.Status != "PendingApproval")
+                {
+                    _logger.LogWarning("Document {DocumentId} cannot be edited in status {Status}", documentId, document.Status);
+                    return null;
+                }
+
+                // Track changes for history
+                var changes = new List<(string Field, string? OldValue, string? NewValue)>();
+
+                // Update fields csak akkor, ha értéket kapott
+                if (dto.InvoiceNumber != null && dto.InvoiceNumber != document.InvoiceNumber)
+                {
+                    changes.Add(("InvoiceNumber", document.InvoiceNumber, dto.InvoiceNumber));
+                    document.InvoiceNumber = dto.InvoiceNumber;
+                }
+
+                if (dto.IssueDate.HasValue && dto.IssueDate != document.IssueDate)
+                {
+                    changes.Add(("IssueDate", document.IssueDate?.ToString("yyyy-MM-dd"), dto.IssueDate.Value.ToString("yyyy-MM-dd")));
+                    document.IssueDate = dto.IssueDate;
+                }
+
+                if (dto.PerformanceDate.HasValue && dto.PerformanceDate != document.PerformanceDate)
+                {
+                    changes.Add(("PerformanceDate", document.PerformanceDate?.ToString("yyyy-MM-dd"), dto.PerformanceDate.Value.ToString("yyyy-MM-dd")));
+                    document.PerformanceDate = dto.PerformanceDate;
+                }
+
+                if (dto.PaymentDeadline.HasValue && dto.PaymentDeadline != document.PaymentDeadline)
+                {
+                    changes.Add(("PaymentDeadline", document.PaymentDeadline?.ToString("yyyy-MM-dd"), dto.PaymentDeadline.Value.ToString("yyyy-MM-dd")));
+                    document.PaymentDeadline = dto.PaymentDeadline;
+                }
+
+                if (dto.GrossAmount.HasValue && dto.GrossAmount != document.GrossAmount)
+                {
+                    changes.Add(("GrossAmount", document.GrossAmount?.ToString(), dto.GrossAmount.Value.ToString()));
+                    document.GrossAmount = dto.GrossAmount;
+                }
+
+                if (dto.Currency != null && dto.Currency != document.Currency)
+                {
+                    changes.Add(("Currency", document.Currency, dto.Currency));
+                    document.Currency = dto.Currency;
+                }
+
+                if (dto.SupplierId.HasValue && dto.SupplierId != document.SupplierId)
+                {
+                    changes.Add(("SupplierId", document.SupplierId?.ToString(), dto.SupplierId.Value.ToString()));
+                    document.SupplierId = dto.SupplierId;
+                }
+
+                // BC fields (TODO: Add to Document model if needed)
+                // if (dto.CostCenter != null) document.CostCenter = dto.CostCenter;
+                // if (dto.GptCode != null) document.GptCode = dto.GptCode;
+                // if (dto.BusinessUnit != null) document.BusinessUnit = dto.BusinessUnit;
+                // if (dto.Project != null) document.Project = dto.Project;
+                // if (dto.Employee != null) document.Employee = dto.Employee;
+
+                // Update metadata
+                document.ModifiedByUserId = currentUserId;
+                document.ModifiedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                // Log changes to history
+                foreach (var (field, oldValue, newValue) in changes)
+                {
+                    var history = new DocumentHistory
+                    {
+                        DocumentId = documentId,
+                        UserId = currentUserId,
+                        Action = "Modified",
+                        FieldName = field,
+                        OldValue = oldValue,
+                        NewValue = newValue,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.DocumentHistories.Add(history);
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Document {DocumentId} updated by user {UserId}", documentId, currentUserId);
+
+                return await GetDocumentByIdAsync(documentId, currentUserId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating document {DocumentId}", documentId);
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Dokumentum fájl letöltése
+        /// </summary>
+        public async Task<Stream?> DownloadDocumentAsync(int documentId, int currentUserId)
+        {
+            try
+            {
+                var document = await _context.Documents
+                    .FirstOrDefaultAsync(d => d.Id == documentId);
+
+                if (document == null)
+                {
+                    _logger.LogWarning("Document not found: {DocumentId}", documentId);
+                    return null;
+                }
+
+                // Jogosultság ellenőrzés
+                if (!await HasAccessToDocumentAsync(document, currentUserId))
+                {
+                    _logger.LogWarning("User {UserId} has no access to download document {DocumentId}", currentUserId, documentId);
+                    return null;
+                }
+
+                // Check if file exists
+                if (!File.Exists(document.StoragePath))
+                {
+                    _logger.LogError("File not found at storage path: {StoragePath}", document.StoragePath);
+                    return null;
+                }
+
+                // Read file to memory stream
+                var memoryStream = new MemoryStream();
+                using (var fileStream = new FileStream(document.StoragePath, FileMode.Open, FileAccess.Read))
+                {
+                    await fileStream.CopyToAsync(memoryStream);
+                }
+
+                memoryStream.Position = 0;
+
+                _logger.LogInformation("Document {DocumentId} downloaded by user {UserId}", documentId, currentUserId);
+
+                return memoryStream;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error downloading document {DocumentId}", documentId);
+                return null;
+            }
+        }
+
+    }
+}

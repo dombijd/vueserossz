@@ -4,6 +4,7 @@ using GlosterIktato.API.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GlosterIktato.API.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251112192633_AddBusinessCentralFieldsToDocument")]
+    partial class AddBusinessCentralFieldsToDocument
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -250,46 +253,6 @@ namespace GlosterIktato.API.Migrations
                     b.ToTable("DocumentHistories");
                 });
 
-            modelBuilder.Entity("GlosterIktato.API.Models.DocumentRelation", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Comment")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("DocumentId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RelatedDocumentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RelationType")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.HasIndex("DocumentId");
-
-                    b.HasIndex("RelatedDocumentId");
-
-                    b.HasIndex("DocumentId", "RelatedDocumentId")
-                        .IsUnique();
-
-                    b.ToTable("DocumentRelations");
-                });
-
             modelBuilder.Entity("GlosterIktato.API.Models.DocumentType", b =>
                 {
                     b.Property<int>("Id")
@@ -429,102 +392,6 @@ namespace GlosterIktato.API.Migrations
                     b.ToTable("UserCompanies");
                 });
 
-            modelBuilder.Entity("GlosterIktato.API.Models.UserGroup", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("CompanyId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<string>("GroupType")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("int");
-
-                    b.Property<int>("RoundRobinIndex")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CompanyId");
-
-                    b.HasIndex("GroupType");
-
-                    b.HasIndex("CompanyId", "Name")
-                        .IsUnique();
-
-                    b.HasIndex("CompanyId", "GroupType", "IsActive");
-
-                    b.ToTable("UserGroups");
-                });
-
-            modelBuilder.Entity("GlosterIktato.API.Models.UserGroupMember", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("AddedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("JoinedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("Priority")
-                        .HasColumnType("int");
-
-                    b.Property<string>("RoleInGroup")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.Property<int>("UserGroupId")
-                        .HasColumnType("int");
-
-                    b.Property<int>("UserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AddedByUserId");
-
-                    b.HasIndex("UserGroupId");
-
-                    b.HasIndex("UserId");
-
-                    b.HasIndex("UserGroupId", "IsActive");
-
-                    b.HasIndex("UserGroupId", "UserId")
-                        .IsUnique();
-
-                    b.ToTable("UserGroupMembers");
-                });
-
             modelBuilder.Entity("GlosterIktato.API.Models.UserRole", b =>
                 {
                     b.Property<int>("UserId")
@@ -625,33 +492,6 @@ namespace GlosterIktato.API.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("GlosterIktato.API.Models.DocumentRelation", b =>
-                {
-                    b.HasOne("GlosterIktato.API.Models.User", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("GlosterIktato.API.Models.Document", "Document")
-                        .WithMany("DocumentRelations")
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("GlosterIktato.API.Models.Document", "RelatedDocument")
-                        .WithMany("RelatedToDocuments")
-                        .HasForeignKey("RelatedDocumentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("CreatedBy");
-
-                    b.Navigation("Document");
-
-                    b.Navigation("RelatedDocument");
-                });
-
             modelBuilder.Entity("GlosterIktato.API.Models.UserCompany", b =>
                 {
                     b.HasOne("GlosterIktato.API.Models.Company", "Company")
@@ -669,43 +509,6 @@ namespace GlosterIktato.API.Migrations
                     b.Navigation("Company");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("GlosterIktato.API.Models.UserGroup", b =>
-                {
-                    b.HasOne("GlosterIktato.API.Models.Company", "Company")
-                        .WithMany()
-                        .HasForeignKey("CompanyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Company");
-                });
-
-            modelBuilder.Entity("GlosterIktato.API.Models.UserGroupMember", b =>
-                {
-                    b.HasOne("GlosterIktato.API.Models.User", "AddedBy")
-                        .WithMany()
-                        .HasForeignKey("AddedByUserId")
-                        .OnDelete(DeleteBehavior.Restrict);
-
-                    b.HasOne("GlosterIktato.API.Models.UserGroup", "UserGroup")
-                        .WithMany("Members")
-                        .HasForeignKey("UserGroupId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("GlosterIktato.API.Models.User", "User")
-                        .WithMany("GroupMemberships")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("AddedBy");
-
-                    b.Navigation("User");
-
-                    b.Navigation("UserGroup");
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.UserRole", b =>
@@ -736,11 +539,7 @@ namespace GlosterIktato.API.Migrations
 
             modelBuilder.Entity("GlosterIktato.API.Models.Document", b =>
                 {
-                    b.Navigation("DocumentRelations");
-
                     b.Navigation("History");
-
-                    b.Navigation("RelatedToDocuments");
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.DocumentType", b =>
@@ -760,16 +559,9 @@ namespace GlosterIktato.API.Migrations
 
             modelBuilder.Entity("GlosterIktato.API.Models.User", b =>
                 {
-                    b.Navigation("GroupMemberships");
-
                     b.Navigation("UserCompanies");
 
                     b.Navigation("UserRoles");
-                });
-
-            modelBuilder.Entity("GlosterIktato.API.Models.UserGroup", b =>
-                {
-                    b.Navigation("Members");
                 });
 #pragma warning restore 612, 618
         }
