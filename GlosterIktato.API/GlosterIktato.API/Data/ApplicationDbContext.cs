@@ -20,6 +20,7 @@ namespace GlosterIktato.API.Data
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<UserCompany> UserCompanies { get; set; }
+        public DbSet<DocumentRelation> DocumentRelations { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -94,6 +95,39 @@ namespace GlosterIktato.API.Data
                 .WithMany()
                 .HasForeignKey(dc => dc.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // DocumentRelation konfiguráció
+            modelBuilder.Entity<DocumentRelation>(entity =>
+            {
+                // Primary key
+                entity.HasKey(dr => dr.Id);
+
+                // DocumentId -> Document kapcsolat
+                entity.HasOne(dr => dr.Document)
+                    .WithMany(d => d.DocumentRelations)
+                    .HasForeignKey(dr => dr.DocumentId)
+                    .OnDelete(DeleteBehavior.Restrict); // Ne törölje a kapcsolatot ha a dokumentumot törlik
+
+                // RelatedDocumentId -> Document kapcsolat
+                entity.HasOne(dr => dr.RelatedDocument)
+                    .WithMany(d => d.RelatedToDocuments)
+                    .HasForeignKey(dr => dr.RelatedDocumentId)
+                    .OnDelete(DeleteBehavior.Restrict); // Ne törölje a kapcsolatot ha a dokumentumot törlik
+
+                // CreatedBy kapcsolat
+                entity.HasOne(dr => dr.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(dr => dr.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Index a gyorsabb kereséshez
+                entity.HasIndex(dr => dr.DocumentId);
+                entity.HasIndex(dr => dr.RelatedDocumentId);
+
+                // Unique constraint - ugyanaz a kapcsolat ne létezzen kétszer
+                entity.HasIndex(dr => new { dr.DocumentId, dr.RelatedDocumentId })
+                    .IsUnique();
+            });
 
             // INDEXEK (Performance optimalizálás)
 

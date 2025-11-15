@@ -204,6 +204,107 @@ namespace GlosterIktato.API.Services
             }
         }
 
+        /// <summary>
+        /// Dokumentumok lekérése szűrőkkel és lapozással
+        /// </summary>
+        public async Task<PaginatedResult<DocumentResponseDto>> GetDocumentsAsync(
+            int userId,
+            int? companyId,
+            string? status,
+            int? assignedToUserId,
+            int page,
+            int pageSize)
+        {
+            try
+            {
+                // User hozzáférési jogosultságai
+                var userCompanyIds = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .Select(uc => uc.CompanyId)
+                    .ToListAsync();
+
+                // Base query
+                var query = _context.Documents
+                    .Include(d => d.Company)
+                    .Include(d => d.DocumentType)
+                    .Include(d => d.Supplier)
+                    .Include(d => d.CreatedBy)
+                    .Include(d => d.AssignedTo)
+                    .Where(d => userCompanyIds.Contains(d.CompanyId)) // User csak saját cégeit látja
+                    .AsQueryable();
+
+                // Filter: CompanyId
+                if (companyId.HasValue)
+                {
+                    query = query.Where(d => d.CompanyId == companyId.Value);
+                }
+
+                // Filter: Status
+                if (!string.IsNullOrWhiteSpace(status))
+                {
+                    query = query.Where(d => d.Status == status);
+                }
+
+                // Filter: AssignedToUserId
+                if (assignedToUserId.HasValue)
+                {
+                    query = query.Where(d => d.AssignedToUserId == assignedToUserId.Value);
+                }
+
+                // Total count
+                var totalCount = await query.CountAsync();
+
+                // Pagination
+                var documents = await query
+                    .OrderByDescending(d => d.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                // Map to DTO
+                var documentDtos = documents.Select(d => new DocumentResponseDto
+                {
+                    Id = d.Id,
+                    ArchiveNumber = d.ArchiveNumber,
+                    OriginalFileName = d.OriginalFileName,
+                    Status = d.Status,
+                    InvoiceNumber = d.InvoiceNumber,
+                    IssueDate = d.IssueDate,
+                    PerformanceDate = d.PerformanceDate,
+                    PaymentDeadline = d.PaymentDeadline,
+                    GrossAmount = d.GrossAmount,
+                    Currency = d.Currency,
+                    CompanyId = d.CompanyId,
+                    CompanyName = d.Company.Name,
+                    DocumentTypeId = d.DocumentTypeId,
+                    DocumentTypeName = d.DocumentType.Name,
+                    DocumentTypeCode = d.DocumentType.Code,
+                    SupplierId = d.SupplierId,
+                    SupplierName = d.Supplier?.Name,
+                    CreatedByUserId = d.CreatedByUserId,
+                    CreatedByName = $"{d.CreatedBy.FirstName} {d.CreatedBy.LastName}",
+                    AssignedToUserId = d.AssignedToUserId,
+                    AssignedToName = d.AssignedTo != null ? $"{d.AssignedTo.FirstName} {d.AssignedTo.LastName}" : null,
+                    CreatedAt = d.CreatedAt,
+                    ModifiedAt = d.ModifiedAt
+                }).ToList();
+
+                return new PaginatedResult<DocumentResponseDto>
+                {
+                    Data = documentDtos,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount,
+                    TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting documents for user {UserId}", userId);
+                throw;
+            }
+        }
+
         // ============================================================
         // HELPER METÓDUSOK
         // ============================================================

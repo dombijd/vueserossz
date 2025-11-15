@@ -2,6 +2,7 @@
 using GlosterIktato.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace GlosterIktato.API.Controllers
@@ -50,6 +51,27 @@ namespace GlosterIktato.API.Controllers
 
             var documents = await _documentService.GetMyTasksAsync(userId);
             return Ok(documents);
+        }
+
+        /// <summary>
+        /// Dokumentumok lekérése szűrőkkel és lapozással
+        /// GET /api/documents?companyId=1&status=PendingApproval&assignedToUserId=2&page=1&pageSize=20
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(typeof(PaginatedResult<DocumentResponseDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetDocuments(
+            [FromQuery] int? companyId,
+            [FromQuery] string? status,
+            [FromQuery] int? assignedToUserId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 20)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == 0)
+                return Unauthorized();
+
+            var result = await _documentService.GetDocumentsAsync(userId, companyId, status, assignedToUserId, page, pageSize);
+            return Ok(result);
         }
 
         /// <summary>

@@ -64,5 +64,15 @@
 
         // Navigációs propertyк
         public ICollection<DocumentHistory> History { get; set; } = new List<DocumentHistory>();
+
+        /// <summary>
+        /// Kapcsolatok ahol ez a dokumentum a fő dokumentum
+        /// </summary>
+        public ICollection<DocumentRelation> DocumentRelations { get; set; } = new List<DocumentRelation>();
+
+        /// <summary>
+        /// Kapcsolatok ahol ez a dokumentum a kapcsolódó dokumentum
+        /// </summary>
+        public ICollection<DocumentRelation> RelatedToDocuments { get; set; } = new List<DocumentRelation>();
     }
 }

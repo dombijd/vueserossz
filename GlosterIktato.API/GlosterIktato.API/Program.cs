@@ -44,6 +44,7 @@ builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
 builder.Services.AddScoped<IDataxoService, DataxoService>();
 builder.Services.AddScoped<IBusinessCentralService, BusinessCentralService>();
 builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+builder.Services.AddScoped<IDocumentRelationService, DocumentRelationService>();
 
 // 5. BACKGROUND SERVICES
 builder.Services.AddHostedService<DataxoPollingService>(); // 30 sec-es polling
