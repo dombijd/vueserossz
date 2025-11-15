@@ -104,6 +104,7 @@ namespace GlosterIktato.API.Controllers
 
         /// <summary>
         /// Cég módosítása (csak Admin)
+        /// PUT /api/companies/{id}
         /// </summary>
         [HttpPut("{id}")]
         [Authorize(Roles = "Admin")]
@@ -138,7 +139,8 @@ namespace GlosterIktato.API.Controllers
         }
 
         /// <summary>
-        /// Cég deaktiválása (csak Admin)
+        /// Cég deaktiválása (soft delete - IsActive = false) (csak Admin)
+        /// DELETE /api/companies/{id}
         /// </summary>
         [HttpDelete("{id}")]
         [Authorize(Roles = "Admin")]

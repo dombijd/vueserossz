@@ -120,10 +120,10 @@ namespace GlosterIktato.API.Services
                 }
 
                 // TaxNumber egyediség ellenőrzése (ha változott)
-                if (dto.TaxNumber != null && dto.TaxNumber != company.TaxNumber)
+                if (!string.IsNullOrWhiteSpace(dto.TaxNumber) && dto.TaxNumber != company.TaxNumber)
                 {
                     var existingCompany = await _context.Companies
-                        .FirstOrDefaultAsync(c => c.TaxNumber == dto.TaxNumber);
+                        .FirstOrDefaultAsync(c => c.TaxNumber == dto.TaxNumber && c.Id != id);
 
                     if (existingCompany != null)
                     {
@@ -134,9 +134,16 @@ namespace GlosterIktato.API.Services
                 }
 
                 // Csak akkor frissítjük, ha érték lett átadva
-                if (dto.Name != null) company.Name = dto.Name;
-                if (dto.Address != null) company.Address = dto.Address;
+                if (!string.IsNullOrWhiteSpace(dto.Name))
+                {
+                    company.Name = dto.Name;
+                }
 
+                // Address can be set to null/empty, so we check if it's explicitly provided
+                if (dto.Address != null)
+                {
+                    company.Address = dto.Address;
+                }
 
                 await _context.SaveChangesAsync();
 
@@ -168,11 +175,19 @@ namespace GlosterIktato.API.Services
                     return false;
                 }
 
+                // Check if already inactive
+                if (!company.IsActive)
+                {
+                    _logger.LogInformation("Company {CompanyId} is already inactive", id);
+                    return true; // Return true as the desired state is already achieved
+                }
+
+                // Soft delete: Set IsActive to false
                 company.IsActive = false;
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Company deactivated: {CompanyId} by user {UserId}", id, deactivatedByUserId);
+                _logger.LogInformation("Company deactivated (soft delete): {CompanyId} by user {UserId}", id, deactivatedByUserId);
 
                 return true;
             }

@@ -305,6 +305,241 @@ namespace GlosterIktato.API.Services
             }
         }
 
+        /// <summary>
+        /// Advanced document search with dynamic filters
+        /// </summary>
+        public async Task<PaginatedResult<DocumentResponseDto>> SearchDocumentsAsync(int userId, DocumentSearchDto searchDto)
+        {
+            try
+            {
+                // Get user's accessible company IDs
+                var userCompanyIds = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .Select(uc => uc.CompanyId)
+                    .ToListAsync();
+
+                // Base query with includes
+                var query = _context.Documents
+                    .Include(d => d.Company)
+                    .Include(d => d.DocumentType)
+                    .Include(d => d.Supplier)
+                    .Include(d => d.CreatedBy)
+                    .Include(d => d.AssignedTo)
+                    .AsQueryable();
+
+                // Permission filter: Only documents from user's companies (base permission check)
+                // This ensures users only see documents from companies they have access to
+                query = query.Where(d => userCompanyIds.Contains(d.CompanyId));
+
+                // Additional permission filter: hasPermission (only documents user has read access to)
+                // This further restricts to documents where user is creator, assigned to, or has company access
+                // Note: This is already covered by the base filter, but kept for explicit permission filtering
+                if (searchDto.HasPermission == true)
+                {
+                    // The base filter already handles company access, so this is effectively the same
+                    // but kept for clarity and potential future use with more granular permissions
+                    query = query.Where(d => 
+                        d.CreatedByUserId == userId || 
+                        d.AssignedToUserId == userId || 
+                        userCompanyIds.Contains(d.CompanyId));
+                }
+
+                // Filter: CompanyId
+                if (searchDto.CompanyId.HasValue)
+                {
+                    query = query.Where(d => d.CompanyId == searchDto.CompanyId.Value);
+                }
+
+                // Filter: SupplierId
+                if (searchDto.SupplierId.HasValue)
+                {
+                    query = query.Where(d => d.SupplierId == searchDto.SupplierId.Value);
+                }
+
+                // Filter: DocumentTypeId
+                if (searchDto.DocumentTypeId.HasValue)
+                {
+                    query = query.Where(d => d.DocumentTypeId == searchDto.DocumentTypeId.Value);
+                }
+
+                // Filter: Status (multi-select - comma-separated)
+                if (!string.IsNullOrWhiteSpace(searchDto.Status))
+                {
+                    var statusList = searchDto.Status
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .ToList();
+
+                    if (statusList.Any())
+                    {
+                        query = query.Where(d => statusList.Contains(d.Status));
+                    }
+                }
+
+                // Filter: AssignedToUserId
+                if (searchDto.AssignedToUserId.HasValue)
+                {
+                    query = query.Where(d => d.AssignedToUserId == searchDto.AssignedToUserId.Value);
+                }
+
+                // Filter: CreatedFrom
+                if (searchDto.CreatedFrom.HasValue)
+                {
+                    query = query.Where(d => d.CreatedAt >= searchDto.CreatedFrom.Value);
+                }
+
+                // Filter: CreatedTo
+                if (searchDto.CreatedTo.HasValue)
+                {
+                    query = query.Where(d => d.CreatedAt <= searchDto.CreatedTo.Value);
+                }
+
+                // Filter: IssueDateFrom
+                if (searchDto.IssueDateFrom.HasValue)
+                {
+                    query = query.Where(d => d.IssueDate.HasValue && d.IssueDate.Value >= searchDto.IssueDateFrom.Value);
+                }
+
+                // Filter: IssueDateTo
+                if (searchDto.IssueDateTo.HasValue)
+                {
+                    query = query.Where(d => d.IssueDate.HasValue && d.IssueDate.Value <= searchDto.IssueDateTo.Value);
+                }
+
+                // Filter: PaymentDeadlineFrom
+                if (searchDto.PaymentDeadlineFrom.HasValue)
+                {
+                    query = query.Where(d => d.PaymentDeadline.HasValue && d.PaymentDeadline.Value >= searchDto.PaymentDeadlineFrom.Value);
+                }
+
+                // Filter: PaymentDeadlineTo
+                if (searchDto.PaymentDeadlineTo.HasValue)
+                {
+                    query = query.Where(d => d.PaymentDeadline.HasValue && d.PaymentDeadline.Value <= searchDto.PaymentDeadlineTo.Value);
+                }
+
+                // Filter: AmountFrom
+                if (searchDto.AmountFrom.HasValue)
+                {
+                    query = query.Where(d => d.GrossAmount.HasValue && d.GrossAmount.Value >= searchDto.AmountFrom.Value);
+                }
+
+                // Filter: AmountTo
+                if (searchDto.AmountTo.HasValue)
+                {
+                    query = query.Where(d => d.GrossAmount.HasValue && d.GrossAmount.Value <= searchDto.AmountTo.Value);
+                }
+
+                // Filter: Currency
+                if (!string.IsNullOrWhiteSpace(searchDto.Currency))
+                {
+                    query = query.Where(d => d.Currency != null && d.Currency == searchDto.Currency);
+                }
+
+                // Filter: InvoiceNumber (exact match)
+                if (!string.IsNullOrWhiteSpace(searchDto.InvoiceNumber))
+                {
+                    query = query.Where(d => d.InvoiceNumber != null && d.InvoiceNumber.Contains(searchDto.InvoiceNumber));
+                }
+
+                // Filter: ArchiveNumber (exact match)
+                if (!string.IsNullOrWhiteSpace(searchDto.ArchiveNumber))
+                {
+                    query = query.Where(d => d.ArchiveNumber.Contains(searchDto.ArchiveNumber));
+                }
+
+                // Filter: FullTextSearch (search in InvoiceNumber and Comments)
+                if (!string.IsNullOrWhiteSpace(searchDto.FullTextSearch))
+                {
+                    var searchTerm = searchDto.FullTextSearch.Trim();
+                    var documentIdsWithMatchingComments = await _context.DocumentComments
+                        .Where(dc => dc.Text.Contains(searchTerm))
+                        .Select(dc => dc.DocumentId)
+                        .Distinct()
+                        .ToListAsync();
+
+                    query = query.Where(d => 
+                        (d.InvoiceNumber != null && d.InvoiceNumber.Contains(searchTerm)) ||
+                        documentIdsWithMatchingComments.Contains(d.Id));
+                }
+
+                // Get total count before pagination
+                var totalCount = await query.CountAsync();
+
+                // Apply sorting
+                query = ApplySorting(query, searchDto.SortBy, searchDto.SortOrder);
+
+                // Apply pagination
+                var page = Math.Max(1, searchDto.Page);
+                var pageSize = Math.Max(1, Math.Min(100, searchDto.PageSize)); // Limit page size to 100
+                var documents = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                // Map to DTOs
+                var documentDtos = documents.Select(d => MapToResponseDto(d)).ToList();
+
+                return new PaginatedResult<DocumentResponseDto>
+                {
+                    Data = documentDtos,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount,
+                    TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching documents for user {UserId}", userId);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Apply dynamic sorting to the query
+        /// </summary>
+        private IQueryable<Document> ApplySorting(IQueryable<Document> query, string? sortBy, string? sortOrder)
+        {
+            var isDescending = string.Equals(sortOrder, "desc", StringComparison.OrdinalIgnoreCase);
+
+            if (string.IsNullOrWhiteSpace(sortBy))
+            {
+                // Default sorting by CreatedAt descending
+                return query.OrderByDescending(d => d.CreatedAt);
+            }
+
+            return sortBy.ToLowerInvariant() switch
+            {
+                "createdat" => isDescending 
+                    ? query.OrderByDescending(d => d.CreatedAt) 
+                    : query.OrderBy(d => d.CreatedAt),
+                "modifiedat" => isDescending 
+                    ? query.OrderByDescending(d => d.ModifiedAt ?? DateTime.MinValue) 
+                    : query.OrderBy(d => d.ModifiedAt ?? DateTime.MinValue),
+                "issuedate" => isDescending 
+                    ? query.OrderByDescending(d => d.IssueDate ?? DateTime.MinValue) 
+                    : query.OrderBy(d => d.IssueDate ?? DateTime.MinValue),
+                "paymentdeadline" => isDescending 
+                    ? query.OrderByDescending(d => d.PaymentDeadline ?? DateTime.MinValue) 
+                    : query.OrderBy(d => d.PaymentDeadline ?? DateTime.MinValue),
+                "grossamount" => isDescending 
+                    ? query.OrderByDescending(d => d.GrossAmount ?? decimal.MinValue) 
+                    : query.OrderBy(d => d.GrossAmount ?? decimal.MinValue),
+                "status" => isDescending 
+                    ? query.OrderByDescending(d => d.Status) 
+                    : query.OrderBy(d => d.Status),
+                "invoicenumber" => isDescending 
+                    ? query.OrderByDescending(d => d.InvoiceNumber ?? string.Empty) 
+                    : query.OrderBy(d => d.InvoiceNumber ?? string.Empty),
+                "archivenumber" => isDescending 
+                    ? query.OrderByDescending(d => d.ArchiveNumber) 
+                    : query.OrderBy(d => d.ArchiveNumber),
+                _ => query.OrderByDescending(d => d.CreatedAt) // Default
+            };
+        }
+
         // ============================================================
         // HELPER METÓDUSOK
         // ============================================================

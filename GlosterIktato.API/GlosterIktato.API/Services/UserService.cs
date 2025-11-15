@@ -1,5 +1,7 @@
 ﻿using GlosterIktato.API.Data;
 using GlosterIktato.API.DTOs.Auth;
+using GlosterIktato.API.DTOs.User;
+using GlosterIktato.API.Models;
 using GlosterIktato.API.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -189,11 +191,19 @@ namespace GlosterIktato.API.Services
                     return false;
                 }
 
+                // Check if already inactive
+                if (!user.IsActive)
+                {
+                    _logger.LogInformation("User {UserId} is already inactive", userId);
+                    return true; // Return true as the desired state is already achieved
+                }
+
+                // Soft delete: Set IsActive to false
                 user.IsActive = false;
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User deactivated: {UserId} by user {DeactivatedBy}", userId, deactivatedByUserId);
+                _logger.LogInformation("User deactivated (soft delete): {UserId} by user {DeactivatedBy}", userId, deactivatedByUserId);
 
                 return true;
             }
@@ -201,6 +211,204 @@ namespace GlosterIktato.API.Services
             {
                 _logger.LogError(ex, "Error deactivating user {UserId}", userId);
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Create a new user with role and company assignments (admin only)
+        /// </summary>
+        public async Task<UserDto?> CreateUserAsync(CreateUserDto dto, int createdByUserId)
+        {
+            try
+            {
+                // Check if email already exists
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == dto.Email.ToLower());
+
+                if (existingUser != null)
+                {
+                    _logger.LogWarning("User with email {Email} already exists", dto.Email);
+                    return null;
+                }
+
+                // Hash password
+                var passwordHash = AuthService.HashPassword(dto.Password);
+
+                // Create user
+                var user = new User
+                {
+                    Email = dto.Email.ToLower(),
+                    PasswordHash = passwordHash,
+                    FirstName = dto.FirstName,
+                    LastName = dto.LastName,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                // Assign roles
+                if (dto.RoleNames != null && dto.RoleNames.Any())
+                {
+                    var roles = await _context.Roles
+                        .Where(r => dto.RoleNames.Contains(r.Name))
+                        .ToListAsync();
+
+                    foreach (var role in roles)
+                    {
+                        _context.UserRoles.Add(new UserRole
+                        {
+                            UserId = user.Id,
+                            RoleId = role.Id
+                        });
+                    }
+                }
+
+                // Assign companies
+                if (dto.CompanyIds != null && dto.CompanyIds.Any())
+                {
+                    var companies = await _context.Companies
+                        .Where(c => dto.CompanyIds.Contains(c.Id) && c.IsActive)
+                        .ToListAsync();
+
+                    foreach (var company in companies)
+                    {
+                        _context.UserCompanies.Add(new UserCompany
+                        {
+                            UserId = user.Id,
+                            CompanyId = company.Id,
+                            AssignedAt = DateTime.UtcNow
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("User created: {Email} by user {CreatedBy}", dto.Email, createdByUserId);
+
+                // Return created user
+                return await GetUserByIdAsync(user.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error creating user {Email}", dto.Email);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Update user with role and company assignments (admin only)
+        /// </summary>
+        public async Task<UserDto?> UpdateUserAdminAsync(int userId, UpdateUserDto dto, int modifiedByUserId)
+        {
+            try
+            {
+                var user = await _context.Users
+                    .Include(u => u.UserRoles)
+                    .Include(u => u.UserCompanies)
+                    .FirstOrDefaultAsync(u => u.Id == userId);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User {UserId} not found for update", userId);
+                    return null;
+                }
+
+                // Update email if provided
+                if (!string.IsNullOrWhiteSpace(dto.Email) && dto.Email.ToLower() != user.Email.ToLower())
+                {
+                    var existingUser = await _context.Users
+                        .FirstOrDefaultAsync(u => u.Email.ToLower() == dto.Email.ToLower() && u.Id != userId);
+
+                    if (existingUser != null)
+                    {
+                        _logger.LogWarning("Email {Email} already exists", dto.Email);
+                        return null;
+                    }
+
+                    user.Email = dto.Email.ToLower();
+                }
+
+                // Update password if provided
+                if (!string.IsNullOrWhiteSpace(dto.Password))
+                {
+                    user.PasswordHash = AuthService.HashPassword(dto.Password);
+                }
+
+                // Update name fields
+                if (!string.IsNullOrWhiteSpace(dto.FirstName))
+                {
+                    user.FirstName = dto.FirstName;
+                }
+
+                if (!string.IsNullOrWhiteSpace(dto.LastName))
+                {
+                    user.LastName = dto.LastName;
+                }
+
+                // Update roles if provided
+                if (dto.RoleNames != null)
+                {
+                    // Remove existing roles
+                    var existingUserRoles = _context.UserRoles.Where(ur => ur.UserId == userId);
+                    _context.UserRoles.RemoveRange(existingUserRoles);
+
+                    // Add new roles
+                    if (dto.RoleNames.Any())
+                    {
+                        var roles = await _context.Roles
+                            .Where(r => dto.RoleNames.Contains(r.Name))
+                            .ToListAsync();
+
+                        foreach (var role in roles)
+                        {
+                            _context.UserRoles.Add(new UserRole
+                            {
+                                UserId = user.Id,
+                                RoleId = role.Id
+                            });
+                        }
+                    }
+                }
+
+                // Update companies if provided
+                if (dto.CompanyIds != null)
+                {
+                    // Remove existing company assignments
+                    var existingUserCompanies = _context.UserCompanies.Where(uc => uc.UserId == userId);
+                    _context.UserCompanies.RemoveRange(existingUserCompanies);
+
+                    // Add new company assignments
+                    if (dto.CompanyIds.Any())
+                    {
+                        var companies = await _context.Companies
+                            .Where(c => dto.CompanyIds.Contains(c.Id) && c.IsActive)
+                            .ToListAsync();
+
+                        foreach (var company in companies)
+                        {
+                            _context.UserCompanies.Add(new UserCompany
+                            {
+                                UserId = user.Id,
+                                CompanyId = company.Id,
+                                AssignedAt = DateTime.UtcNow
+                            });
+                        }
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("User updated (admin): {UserId} by user {ModifiedBy}", userId, modifiedByUserId);
+
+                // Return updated user
+                return await GetUserByIdAsync(user.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error updating user {UserId}", userId);
+                throw;
             }
         }
     }

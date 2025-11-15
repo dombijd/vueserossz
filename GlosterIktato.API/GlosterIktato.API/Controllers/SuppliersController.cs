@@ -109,6 +109,10 @@ namespace GlosterIktato.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Beszállító módosítása
+        /// PUT /api/suppliers/{id}
+        /// </summary>
         [HttpPut("{id}")]
         [ProducesResponseType(typeof(SupplierDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -140,6 +144,10 @@ namespace GlosterIktato.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Beszállító deaktiválása (soft delete - IsActive = false)
+        /// DELETE /api/suppliers/{id}
+        /// </summary>
         [HttpDelete("{id}")]
         [ProducesResponseType(StatusCodes.Status204NoContent)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]

@@ -162,10 +162,11 @@ namespace GlosterIktato.API.Services
                     return null;
                 }
 
-                if (dto.TaxNumber != null && dto.TaxNumber != supplier.TaxNumber)
+                // TaxNumber egyediség ellenőrzése (ha változott)
+                if (!string.IsNullOrWhiteSpace(dto.TaxNumber) && dto.TaxNumber != supplier.TaxNumber)
                 {
                     var existingSupplier = await _context.Suppliers
-                        .FirstOrDefaultAsync(s => s.TaxNumber == dto.TaxNumber);
+                        .FirstOrDefaultAsync(s => s.TaxNumber == dto.TaxNumber && s.Id != id);
 
                     if (existingSupplier != null)
                     {
@@ -175,12 +176,32 @@ namespace GlosterIktato.API.Services
                     supplier.TaxNumber = dto.TaxNumber;
                 }
 
-                if (dto.Name != null) supplier.Name = dto.Name;
-                if (dto.Address != null) supplier.Address = dto.Address;
-                if (dto.ContactPerson != null) supplier.ContactPerson = dto.ContactPerson;
-                if (dto.Email != null) supplier.Email = dto.Email;
-                if (dto.Phone != null) supplier.Phone = dto.Phone;
+                // Csak akkor frissítjük, ha érték lett átadva
+                if (!string.IsNullOrWhiteSpace(dto.Name))
+                {
+                    supplier.Name = dto.Name;
+                }
 
+                // Address, ContactPerson, Email, Phone can be set to null/empty, so we check if they're explicitly provided
+                if (dto.Address != null)
+                {
+                    supplier.Address = dto.Address;
+                }
+
+                if (dto.ContactPerson != null)
+                {
+                    supplier.ContactPerson = dto.ContactPerson;
+                }
+
+                if (dto.Email != null)
+                {
+                    supplier.Email = dto.Email;
+                }
+
+                if (dto.Phone != null)
+                {
+                    supplier.Phone = dto.Phone;
+                }
 
                 await _context.SaveChangesAsync();
 
@@ -218,11 +239,19 @@ namespace GlosterIktato.API.Services
                     return false;
                 }
 
+                // Check if already inactive
+                if (!supplier.IsActive)
+                {
+                    _logger.LogInformation("Supplier {SupplierId} is already inactive", id);
+                    return true; // Return true as the desired state is already achieved
+                }
+
+                // Soft delete: Set IsActive to false
                 supplier.IsActive = false;
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Supplier deactivated: {SupplierId} by user {UserId}", id, deactivatedByUserId);
+                _logger.LogInformation("Supplier deactivated (soft delete): {SupplierId} by user {UserId}", id, deactivatedByUserId);
 
                 return true;
             }

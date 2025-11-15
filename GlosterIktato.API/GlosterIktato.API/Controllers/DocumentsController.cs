@@ -75,6 +75,34 @@ namespace GlosterIktato.API.Controllers
         }
 
         /// <summary>
+        /// Advanced document search with multiple filters
+        /// GET /api/documents/search?companyId=1&status=Draft,PendingApproval&createdFrom=2024-01-01&page=1&pageSize=20
+        /// </summary>
+        [HttpGet("search")]
+        [ProducesResponseType(typeof(PaginatedResult<DocumentResponseDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> SearchDocuments([FromQuery] DocumentSearchDto searchDto)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == 0)
+                return Unauthorized();
+
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            try
+            {
+                var result = await _documentService.SearchDocumentsAsync(userId, searchDto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error searching documents for user {UserId}", userId);
+                return StatusCode(500, new { message = "Hiba történt a dokumentumok keresése során" });
+            }
+        }
+
+        /// <summary>
         /// Dokumentum részletes adatai
         /// </summary>
         [HttpGet("{id}")]
