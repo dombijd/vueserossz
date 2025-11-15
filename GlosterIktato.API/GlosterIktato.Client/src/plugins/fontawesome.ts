@@ -38,6 +38,11 @@ import {
   faInfoCircle,
   faClock,
   faClipboardCheck,
+  faRightToBracket,
+  faRightFromBracket,
+  faArrowRotateRight,
+  faGauge,
+  faGear,
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -78,6 +83,11 @@ library.add(
   faInfoCircle,
   faClock,
   faClipboardCheck,
+  faRightToBracket,
+  faRightFromBracket,
+  faArrowRotateRight,
+  faGauge,
+  faGear,
 )
 
 export { FontAwesomeIcon }
