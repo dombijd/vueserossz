@@ -1,58 +1,58 @@
 <template>
-	<header class="top-bar">
-		<div class="top-bar-left">
+	<header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-[100]">
+		<div class="flex items-center gap-4">
 			<!-- Mobile Menu Toggle -->
-			<button @click="$emit('toggle-sidebar')" class="menu-toggle">
+			<button @click="$emit('toggle-sidebar')" class="md:hidden bg-transparent border-none text-2xl text-gray-600 cursor-pointer p-2 rounded-lg transition-colors duration-200 hover:bg-gray-50">
 				<font-awesome-icon icon="bars" />
 			</button>
 
 			<!-- Page Title (optional) -->
-			<h1 class="page-title">{{ pageTitle }}</h1>
+			<h1 class="text-xl md:text-2xl font-semibold text-gray-800 m-0">{{ pageTitle }}</h1>
 		</div>
 
-		<div class="top-bar-right">
+		<div class="flex items-center gap-4">
 			<!-- Notifications (placeholder) -->
-			<button class="icon-button" title="Értesítések">
+			<button class="relative bg-transparent border-none text-xl text-gray-600 cursor-pointer p-2 rounded-lg transition-colors duration-200 hover:bg-gray-50" title="Értesítések">
 				<font-awesome-icon icon="bell" />
-				<span v-if="notificationCount > 0" class="badge">{{ notificationCount }}</span>
+				<span v-if="notificationCount > 0" class="absolute top-0 right-0 bg-red-500 text-white text-[0.65rem] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{{ notificationCount }}</span>
 			</button>
 
 			<!-- User Menu -->
-			<div class="user-menu" @click="toggleUserMenu">
-				<div class="user-info">
-					<div class="user-avatar">
+			<div ref="userMenuRef" class="relative cursor-pointer" @click="toggleUserMenu">
+				<div class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 hover:bg-gray-50">
+					<div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-semibold text-sm">
 						{{ userInitials }}
 					</div>
-					<div class="user-details">
-						<span class="user-name">{{ userName }}</span>
-						<span class="user-role">{{ primaryRole }}</span>
+					<div class="hidden md:flex flex-col gap-0.5">
+						<span class="font-semibold text-gray-800 text-sm">{{ userName }}</span>
+						<span class="text-xs text-gray-500">{{ primaryRole }}</span>
 					</div>
-					<font-awesome-icon icon="chevron-down" class="dropdown-icon" />
+					<font-awesome-icon icon="chevron-down" class="hidden md:block text-xs text-gray-400 transition-transform duration-200 group-hover:translate-y-0.5" />
 				</div>
 
 				<!-- Dropdown Menu -->
-				<div v-if="showUserMenu" class="user-dropdown">
-					<div class="dropdown-header">
-						<strong>{{ userName }}</strong>
-						<span class="user-email">{{ userEmail }}</span>
+				<div v-if="showUserMenu" class="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[220px] z-[1000]">
+					<div class="p-4 flex flex-col gap-1">
+						<strong class="text-gray-800 text-sm">{{ userName }}</strong>
+						<span class="text-gray-500 text-xs">{{ userEmail }}</span>
 					</div>
 
-					<div class="dropdown-divider"></div>
+					<div class="h-px bg-gray-200 my-2"></div>
 
-					<a href="#" class="dropdown-item" @click.prevent="goToProfile">
-						<font-awesome-icon icon="user" />
+					<a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 no-underline transition-colors duration-200 hover:bg-gray-50" @click.prevent="goToProfile">
+						<font-awesome-icon icon="user" class="text-base text-gray-500" />
 						<span>Profil</span>
 					</a>
 
-					<a href="#" class="dropdown-item" @click.prevent="goToSettings">
-						<font-awesome-icon icon="gear" />
+					<a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 no-underline transition-colors duration-200 hover:bg-gray-50" @click.prevent="goToSettings">
+						<font-awesome-icon icon="gear" class="text-base text-gray-500" />
 						<span>Beállítások</span>
 					</a>
 
-					<div class="dropdown-divider"></div>
+					<div class="h-px bg-gray-200 my-2"></div>
 
-					<a href="#" class="dropdown-item logout" @click.prevent="handleLogout">
-						<font-awesome-icon icon="right-from-bracket" />
+					<a href="#" class="flex items-center gap-3 px-4 py-3 text-red-600 no-underline transition-colors duration-200 hover:bg-gray-50" @click.prevent="handleLogout">
+						<font-awesome-icon icon="right-from-bracket" class="text-base text-red-600" />
 						<span>Kijelentkezés</span>
 					</a>
 				</div>
@@ -78,6 +78,7 @@ const { success } = useToast();
 // State
 const showUserMenu = ref<boolean>(false);
 const notificationCount = ref<number>(0); // Placeholder
+const userMenuRef = ref<HTMLElement | null>(null);
 
 // Computed
 const userName = computed(() => authStore.userName || 'User');
@@ -131,7 +132,7 @@ async function handleLogout() {
 // Close dropdown when clicking outside
 function handleClickOutside(event: MouseEvent) {
 	const target = event.target as HTMLElement;
-	if (!target.closest('.user-menu')) {
+	if (userMenuRef.value && !userMenuRef.value.contains(target)) {
 		closeUserMenu();
 	}
 }
@@ -144,221 +145,3 @@ onUnmounted(() => {
 	document.removeEventListener('click', handleClickOutside);
 });
 </script>
-
-<style scoped>
-.top-bar {
-	height: 64px;
-	background: white;
-	border-bottom: 1px solid #e2e8f0;
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	padding: 0 1.5rem;
-	position: sticky;
-	top: 0;
-	z-index: 100;
-}
-
-.top-bar-left {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-}
-
-.menu-toggle {
-	display: none;
-	background: none;
-	border: none;
-	font-size: 1.5rem;
-	color: #4a5568;
-	cursor: pointer;
-	padding: 0.5rem;
-	border-radius: 8px;
-	transition: background 0.2s;
-}
-
-.menu-toggle:hover {
-	background: #f7fafc;
-}
-
-.page-title {
-	font-size: 1.25rem;
-	font-weight: 600;
-	color: #2d3748;
-	margin: 0;
-}
-
-.top-bar-right {
-	display: flex;
-	align-items: center;
-	gap: 1rem;
-}
-
-.icon-button {
-	position: relative;
-	background: none;
-	border: none;
-	font-size: 1.25rem;
-	color: #4a5568;
-	cursor: pointer;
-	padding: 0.5rem;
-	border-radius: 8px;
-	transition: background 0.2s;
-}
-
-.icon-button:hover {
-	background: #f7fafc;
-}
-
-.badge {
-	position: absolute;
-	top: 0;
-	right: 0;
-	background: #f56565;
-	color: white;
-	font-size: 0.65rem;
-	font-weight: 600;
-	padding: 0.15rem 0.4rem;
-	border-radius: 10px;
-	min-width: 18px;
-	text-align: center;
-}
-
-.user-menu {
-	position: relative;
-	cursor: pointer;
-}
-
-.user-info {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 0.5rem 0.75rem;
-	border-radius: 8px;
-	transition: background 0.2s;
-}
-
-.user-info:hover {
-	background: #f7fafc;
-}
-
-.user-avatar {
-	width: 40px;
-	height: 40px;
-	border-radius: 50%;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	color: white;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-weight: 600;
-	font-size: 0.9rem;
-}
-
-.user-details {
-	display: flex;
-	flex-direction: column;
-	gap: 0.15rem;
-}
-
-.user-name {
-	font-weight: 600;
-	color: #2d3748;
-	font-size: 0.9rem;
-}
-
-.user-role {
-	font-size: 0.75rem;
-	color: #718096;
-}
-
-.dropdown-icon {
-	font-size: 0.75rem;
-	color: #a0aec0;
-	transition: transform 0.2s;
-}
-
-.user-menu:hover .dropdown-icon {
-	transform: translateY(2px);
-}
-
-.user-dropdown {
-	position: absolute;
-	top: calc(100% + 0.5rem);
-	right: 0;
-	background: white;
-	border: 1px solid #e2e8f0;
-	border-radius: 8px;
-	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-	min-width: 220px;
-	z-index: 1000;
-}
-
-.dropdown-header {
-	padding: 1rem;
-	display: flex;
-	flex-direction: column;
-	gap: 0.25rem;
-}
-
-.dropdown-header strong {
-	color: #2d3748;
-	font-size: 0.95rem;
-}
-
-.user-email {
-	color: #718096;
-	font-size: 0.85rem;
-}
-
-.dropdown-divider {
-	height: 1px;
-	background: #e2e8f0;
-	margin: 0.5rem 0;
-}
-
-.dropdown-item {
-	display: flex;
-	align-items: center;
-	gap: 0.75rem;
-	padding: 0.75rem 1rem;
-	color: #4a5568;
-	text-decoration: none;
-	transition: background 0.2s;
-}
-
-.dropdown-item:hover {
-	background: #f7fafc;
-}
-
-.dropdown-item svg {
-	font-size: 1rem;
-	color: #718096;
-}
-
-.dropdown-item.logout {
-	color: #e53e3e;
-}
-
-.dropdown-item.logout svg {
-	color: #e53e3e;
-}
-
-@media (max-width: 768px) {
-	.menu-toggle {
-		display: block;
-	}
-
-	.page-title {
-		font-size: 1rem;
-	}
-
-	.user-details {
-		display: none;
-	}
-
-	.dropdown-icon {
-		display: none;
-	}
-}
-</style>

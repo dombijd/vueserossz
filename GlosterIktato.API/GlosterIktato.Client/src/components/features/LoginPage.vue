@@ -1,18 +1,18 @@
 <template>
-	<div class="login-page">
-		<div class="login-container">
-			<div class="login-card">
+	<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 p-8">
+		<div class="w-full max-w-[450px]">
+			<div class="bg-white rounded-2xl shadow-2xl p-12 sm:p-8">
 				<!-- Logo / Header -->
-				<div class="login-header">
-					<h1>Iktatórendszer</h1>
-					<p>Jelentkezzen be a folytatáshoz</p>
+				<div class="text-center mb-8">
+					<h1 class="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Iktatórendszer</h1>
+					<p class="text-gray-500 text-sm sm:text-base">Jelentkezzen be a folytatáshoz</p>
 				</div>
 
 				<!-- Login Form -->
-				<form @submit.prevent="handleSubmit" class="login-form">
+				<form @submit.prevent="handleSubmit" class="flex flex-col gap-6">
 					<!-- Email Input -->
-					<div class="form-group">
-						<label for="email">Email cím</label>
+					<div class="flex flex-col gap-2">
+						<label for="email" class="font-semibold text-gray-700 text-sm">Email cím</label>
 						<BaseInput
 							id="email"
 							v-model="email"
@@ -24,8 +24,8 @@
 					</div>
 
 					<!-- Password Input -->
-					<div class="form-group">
-						<label for="password">Jelszó</label>
+					<div class="flex flex-col gap-2">
+						<label for="password" class="font-semibold text-gray-700 text-sm">Jelszó</label>
 						<BaseInput
 							id="password"
 							v-model="password"
@@ -37,7 +37,7 @@
 					</div>
 
 					<!-- Error Message -->
-					<div v-if="errorMessage" class="error-message">
+					<div v-if="errorMessage" class="flex items-center gap-2 px-4 py-3 bg-red-100 border border-red-300 rounded-lg text-red-700 text-sm">
 						<font-awesome-icon icon="exclamation-circle" />
 						<span>{{ errorMessage }}</span>
 					</div>
@@ -47,7 +47,7 @@
 						type="submit"
 						variant="primary"
 						:disabled="isLoading"
-						class="login-button"
+						class="w-full py-3.5 text-base font-semibold mt-2"
 					>
 						<font-awesome-icon v-if="isLoading" icon="spinner" spin />
 						<span v-else>Bejelentkezés</span>
@@ -55,23 +55,23 @@
 				</form>
 
 				<!-- Demo Credentials Info -->
-				<div class="demo-info">
-					<p class="demo-title">Demo belépési adatok:</p>
-					<div class="demo-credentials">
-						<div class="demo-item">
-							<strong>Admin:</strong> admin@gloster.hu / admin123
+				<div class="mt-8 pt-8 border-t border-gray-200">
+					<p class="text-sm font-semibold text-gray-600 mb-3">Demo belépési adatok:</p>
+					<div class="flex flex-col gap-2">
+						<div class="text-xs text-gray-500 px-2 py-2 bg-gray-50 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-700">
+							<strong class="text-gray-700 mr-2">Admin:</strong> admin@gloster.hu / admin123
 						</div>
-						<div class="demo-item">
-							<strong>Iktató:</strong> iktato@gloster.hu / iktato123
+						<div class="text-xs text-gray-500 px-2 py-2 bg-gray-50 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-700">
+							<strong class="text-gray-700 mr-2">Iktató:</strong> iktato@gloster.hu / iktato123
 						</div>
-						<div class="demo-item">
-							<strong>Jóváhagyó:</strong> jóváhagyó@gloster.hu / jovahagyo123
+						<div class="text-xs text-gray-500 px-2 py-2 bg-gray-50 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-700">
+							<strong class="text-gray-700 mr-2">Jóváhagyó:</strong> jóváhagyó@gloster.hu / jovahagyo123
 						</div>
-						<div class="demo-item">
-							<strong>Vezető:</strong> vezeto@gloster.hu / vezeto123
+						<div class="text-xs text-gray-500 px-2 py-2 bg-gray-50 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-700">
+							<strong class="text-gray-700 mr-2">Vezető:</strong> vezeto@gloster.hu / vezeto123
 						</div>
-						<div class="demo-item">
-							<strong>Könyvelő:</strong> konyvelő@gloster.hu / konyvelo123
+						<div class="text-xs text-gray-500 px-2 py-2 bg-gray-50 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-700">
+							<strong class="text-gray-700 mr-2">Könyvelő:</strong> konyvelő@gloster.hu / konyvelo123
 						</div>
 					</div>
 				</div>
@@ -141,130 +141,3 @@ function quickLogin(demoEmail: string, demoPassword: string) {
 	handleSubmit();
 }
 </script>
-
-<style scoped>
-.login-page {
-	min-height: 100vh;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-	padding: 2rem;
-}
-
-.login-container {
-	width: 100%;
-	max-width: 450px;
-}
-
-.login-card {
-	background: white;
-	border-radius: 16px;
-	box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-	padding: 3rem;
-}
-
-.login-header {
-	text-align: center;
-	margin-bottom: 2rem;
-}
-
-.login-header h1 {
-	font-size: 2rem;
-	font-weight: 700;
-	color: #1a202c;
-	margin-bottom: 0.5rem;
-}
-
-.login-header p {
-	color: #718096;
-	font-size: 0.95rem;
-}
-
-.login-form {
-	display: flex;
-	flex-direction: column;
-	gap: 1.5rem;
-}
-
-.form-group {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-}
-
-.form-group label {
-	font-weight: 600;
-	color: #2d3748;
-	font-size: 0.9rem;
-}
-
-.error-message {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	padding: 0.75rem 1rem;
-	background: #fed7d7;
-	border: 1px solid #fc8181;
-	border-radius: 8px;
-	color: #c53030;
-	font-size: 0.9rem;
-}
-
-.login-button {
-	width: 100%;
-	padding: 0.875rem;
-	font-size: 1rem;
-	font-weight: 600;
-	margin-top: 0.5rem;
-}
-
-.demo-info {
-	margin-top: 2rem;
-	padding-top: 2rem;
-	border-top: 1px solid #e2e8f0;
-}
-
-.demo-title {
-	font-size: 0.85rem;
-	font-weight: 600;
-	color: #4a5568;
-	margin-bottom: 0.75rem;
-}
-
-.demo-credentials {
-	display: flex;
-	flex-direction: column;
-	gap: 0.5rem;
-}
-
-.demo-item {
-	font-size: 0.8rem;
-	color: #718096;
-	padding: 0.5rem;
-	background: #f7fafc;
-	border-radius: 6px;
-	cursor: pointer;
-	transition: all 0.2s;
-}
-
-.demo-item:hover {
-	background: #edf2f7;
-	color: #2d3748;
-}
-
-.demo-item strong {
-	color: #2d3748;
-	margin-right: 0.5rem;
-}
-
-@media (max-width: 640px) {
-	.login-card {
-		padding: 2rem;
-	}
-
-	.login-header h1 {
-		font-size: 1.5rem;
-	}
-}
-</style>
