@@ -1,75 +1,73 @@
 <template>
 	<div class="flex h-screen w-screen overflow-hidden bg-gray-50">
+		<!-- Sidebar -->
 		<SideNav
-			v-model:collapsed="collapsed"
-			:items="navItems"
+			:collapsed="sidebarCollapsed"
+			@toggle-collapse="uiStore.toggleSidebar"
+			class="hidden md:block"
 		/>
 
+		<!-- Mobile sidebar overlay -->
+		<div
+			v-if="!sidebarCollapsed"
+			class="fixed inset-0 z-40 bg-black bg-opacity-50 md:hidden"
+			@click="uiStore.setSidebarCollapsed(true)"
+		></div>
+
+		<!-- Mobile sidebar -->
+		<div
+			class="fixed inset-y-0 left-0 z-50 w-64 transform bg-white shadow-lg transition-transform duration-200 ease-in-out md:hidden"
+			:class="sidebarCollapsed ? '-translate-x-full' : 'translate-x-0'"
+		>
+			<SideNav
+				:collapsed="false"
+				@toggle-collapse="uiStore.toggleSidebar"
+			/>
+		</div>
+
+		<!-- Main content area -->
 		<div class="flex min-w-0 flex-1 flex-col">
+			<!-- TopBar (fixed at top) -->
 			<TopBar
-				:logo-text="logoText"
-				:logo-src="logoSrc"
-				:companies="companies"
-				:selected-company-id="selectedCompanyId"
-				@update:selectedCompanyId="val => $emit('update:selectedCompanyId', val)"
-				@open-notifications="$emit('open-notifications')"
-				@open-user-menu="$emit('open-user-menu')"
-				@toggle-sidebar="collapsed = !collapsed"
+				class="fixed top-0 left-0 right-0 z-50"
+				:class="sidebarCollapsed ? 'md:left-16' : 'md:left-64'"
 			/>
 
-			<main class="min-h-0 flex-1 overflow-auto p-4">
-				<slot />
+			<!-- Content area with padding and max-width -->
+			<main
+				class="min-h-0 flex-1 overflow-auto p-4 md:p-6 lg:p-8"
+				style="margin-top: 64px;"
+			>
+				<div class="mx-auto max-w-7xl">
+					<slot />
+				</div>
 			</main>
 		</div>
 	</div>
-	<!-- optional footer slot -->
-	<slot name="footer" />
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { watch } from 'vue';
+import { storeToRefs } from 'pinia';
+import { useRoute } from 'vue-router';
 import SideNav from './SideNav.vue';
 import TopBar from './TopBar.vue';
-import type { Company } from '../../types/user.types';
-import type { IconDefinition, IconProp } from '@fortawesome/fontawesome-svg-core';
+import { useUIStore } from '@/stores/uiStore';
 
-interface NavItem {
-	label: string;
-	to?: string;
-	icon?: IconProp | IconDefinition | [string, string] | string;
-	children?: NavItem[];
-	exact?: boolean;
-}
+/**
+ * AppLayout component - Main application layout wrapper
+ */
+const uiStore = useUIStore();
+const { sidebarCollapsed } = storeToRefs(uiStore);
+const route = useRoute();
 
-interface AppLayoutProps {
-	navItems?: NavItem[];
-	companies?: Company[];
-	selectedCompanyId?: number | null;
-	logoText?: string;
-	logoSrc?: string;
-	defaultCollapsed?: boolean;
-}
-
-const props = withDefaults(defineProps<AppLayoutProps>(), {
-	navItems: () => [],
-	companies: () => [],
-	selectedCompanyId: null,
-	logoText: 'App',
-	defaultCollapsed: false
-});
-
-defineEmits<{
-	(e: 'update:selectedCompanyId', value: number | null): void;
-	(e: 'open-notifications'): void;
-	(e: 'open-user-menu'): void;
-}>();
-
-const collapsed = ref<boolean>(props.defaultCollapsed);
-const navItems = props.navItems;
-const companies = props.companies;
-const selectedCompanyId = props.selectedCompanyId;
-const logoText = props.logoText;
-const logoSrc = props.logoSrc;
+// Auto-collapse sidebar on mobile when route changes
+watch(
+	() => route.path,
+	() => {
+		if (window.innerWidth < 768) {
+			uiStore.setSidebarCollapsed(true);
+		}
+	}
+);
 </script>
-
-
