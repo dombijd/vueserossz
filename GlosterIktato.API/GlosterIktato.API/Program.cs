@@ -1,3 +1,4 @@
+ï»¿using GlosterIktato.API.BackgroundServices;
 using GlosterIktato.API.Data;
 using GlosterIktato.API.Services;
 using GlosterIktato.API.Services.Interfaces;
@@ -12,12 +13,44 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. SERVICES (Dependency Injection)
+// 2. HTTP CLIENT (Dataxo szÃ¡mÃ¡ra)
+builder.Services.AddHttpClient("DataxoClient", client =>
+{
+    var baseUrl = builder.Configuration["Dataxo:BaseUrl"] ?? "https://api.dataxo.example.com";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+});
+
+// HTTP CLIENT (Business Central szÃ¡mÃ¡ra)
+builder.Services.AddHttpClient("BusinessCentralClient", client =>
+{
+    var baseUrl = builder.Configuration["BusinessCentral:BaseUrl"] ?? "https://api.businesscentral.dynamics.com";
+    client.BaseAddress = new Uri(baseUrl);
+    client.Timeout = TimeSpan.FromSeconds(30);
+    // TODO: Add OAuth authentication header in production
+});
+
+// 3. MEMORY CACHE (BC master data cache-elÃ©shez)
+builder.Services.AddMemoryCache();
+
+// 4. SERVICES (Dependency Injection)
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-// TODO: További service-ek regisztrációja késõbb (DocumentService, stb.)
+builder.Services.AddScoped<ISupplierService, SupplierService>();
+builder.Services.AddScoped<ICompanyService, CompanyService>();
+builder.Services.AddScoped<IArchiveNumberService, ArchiveNumberService>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
+builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+builder.Services.AddScoped<IDataxoService, DataxoService>();
+builder.Services.AddScoped<IBusinessCentralService, BusinessCentralService>();
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+builder.Services.AddScoped<IDocumentRelationService, DocumentRelationService>();
+builder.Services.AddScoped<IUserGroupService, UserGroupService>();
 
-// 3. JWT AUTHENTICATION
+// 5. BACKGROUND SERVICES
+builder.Services.AddHostedService<DataxoPollingService>(); // 30 sec-es polling
+
+// 6. JWT AUTHENTICATION
 var jwtSecret = builder.Configuration["JwtSettings:Secret"]
     ?? throw new InvalidOperationException("JWT Secret not configured in appsettings.json");
 
@@ -30,7 +63,23 @@ builder.Services.AddAuthentication(options =>
 .AddJwtBearer(options =>
 {
     options.SaveToken = true;
-    options.RequireHttpsMetadata = false; // Dev környezetben false, prod-ban true!
+    options.RequireHttpsMetadata = false; // Dev kÃ¶rnyezetben false, prod-ban true!
+    
+    // Don't process OPTIONS requests (CORS preflight)
+    options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            // Skip authentication for OPTIONS requests (CORS preflight)
+            if (context.Request.Method == "OPTIONS")
+            {
+                context.NoResult();
+                return Task.CompletedTask;
+            }
+            return Task.CompletedTask;
+        }
+    };
+    
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -40,13 +89,13 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
         ValidAudience = builder.Configuration["JwtSettings:Audience"],
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret)),
-        ClockSkew = TimeSpan.Zero // Token azonnal lejár az expiry idõpontban
+        ClockSkew = TimeSpan.Zero // Token azonnal lejÃ¡r az expiry idÃµpontban
     };
 });
 
 builder.Services.AddAuthorization();
 
-// 4. CORS
+// 7. CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowVueApp",
@@ -57,8 +106,14 @@ builder.Services.AddCors(options =>
             .AllowCredentials());
 });
 
-// 5. CONTROLLERS & SWAGGER
-builder.Services.AddControllers();
+// 8. CONTROLLERS & SWAGGER
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Ensure camelCase JSON serialization for frontend compatibility
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.WriteIndented = false;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -92,7 +147,7 @@ builder.Services.AddSwaggerGen(options =>
 // BUILD APP
 var app = builder.Build();
 
-// 6. SEED DATA (csak dev környezetben)
+// 9. SEED DATA (csak dev kÃ¶rnyezetben)
 if (app.Environment.IsDevelopment())
 {
     using var scope = app.Services.CreateScope();
@@ -101,12 +156,12 @@ if (app.Environment.IsDevelopment())
 
     try
     {
-        // Migration futtatása automatikusan
+        // Migration futtatÃ¡sa automatikusan
         logger.LogInformation("Running database migrations...");
         await context.Database.MigrateAsync();
         logger.LogInformation("Migrations completed");
 
-        // Seed data futtatása
+        // Seed data futtatÃ¡sa
         logger.LogInformation("Seeding database...");
         await DbSeeder.SeedAsync(context);
         logger.LogInformation("Database seeded successfully");
@@ -117,25 +172,43 @@ if (app.Environment.IsDevelopment())
     }
 }
 
-// 7. MIDDLEWARE PIPELINE
+// 10. MIDDLEWARE PIPELINE
+// CORS MUST be first to handle preflight requests before any redirects
+app.UseCors("AllowVueApp");
+
+// Handle OPTIONS requests explicitly (CORS preflight)
+app.Use(async (context, next) =>
+{
+    if (context.Request.Method == "OPTIONS")
+    {
+        context.Response.StatusCode = 200;
+        await context.Response.CompleteAsync();
+        return;
+    }
+    await next();
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Gloster Iktató API v1");
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Gloster IktatÃ³ API v1");
         options.RoutePrefix = "swagger"; // URL: /swagger
     });
 }
 
-app.UseHttpsRedirection();
+// Only use HTTPS redirection in production
+// Note: HTTPS redirection must come AFTER CORS to avoid redirecting preflight requests
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 
-app.UseCors("AllowVueApp"); // CORS elõbb mint Auth!
-
-app.UseAuthentication(); // Authentication elõbb mint Authorization
+app.UseAuthentication(); // Authentication elÃµbb mint Authorization
 app.UseAuthorization();
 
 app.MapControllers();
 
-// 8. RUN
+// 11. RUN
 app.Run();

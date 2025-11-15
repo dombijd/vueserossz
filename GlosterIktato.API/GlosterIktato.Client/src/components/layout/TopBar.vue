@@ -1,258 +1,147 @@
 <template>
-	<div class="relative">
-		<header
-			class="flex h-16 items-center justify-between border-b border-gray-200 bg-white px-4 shadow-sm transition-all duration-200"
-			:class="{ 'md:pl-16': sidebarCollapsed, 'md:pl-64': !sidebarCollapsed }"
-		>
-		<!-- Left: Logo with home icon -->
-		<div class="flex items-center gap-3">
-			<button
-				type="button"
-				class="md:hidden inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-				@click="$emit('toggle-sidebar')"
-				aria-label="Toggle sidebar"
-			>
-				<FontAwesomeIcon :icon="['fas', 'bars']" class="h-5 w-5" />
+	<header class="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 sticky top-0 z-[100]">
+		<div class="flex items-center gap-4">
+			<!-- Mobile Menu Toggle -->
+			<button @click="$emit('toggle-sidebar')" class="md:hidden bg-transparent border-none text-2xl text-gray-600 cursor-pointer p-2 rounded-lg transition-colors duration-200 hover:bg-gray-50">
+				<font-awesome-icon icon="bars" />
 			</button>
-			<router-link
-				to="/dashboard"
-				class="flex items-center gap-2 text-lg font-semibold text-gray-900 hover:text-blue-600 transition-colors"
-				aria-label="Go to dashboard"
-			>
-				<FontAwesomeIcon :icon="['fas', 'home']" class="h-5 w-5" />
-				<span>GlosterIktato</span>
-			</router-link>
+
+			<!-- Page Title (optional) -->
+			<h1 class="text-xl md:text-2xl font-semibold text-gray-800 m-0">{{ pageTitle }}</h1>
 		</div>
 
-		<!-- Center: Company selector (only if user has multiple companies) -->
-		<div v-if="hasMultipleCompanies" class="hidden md:flex min-w-[220px] max-w-xs flex-1 items-center justify-center px-4">
-			<BaseSelect
-				:model-value="selectedCompanyId"
-				:options="companyOptions"
-				placeholder="Select company..."
-				@update:modelValue="onCompanyChange"
-				class="w-full"
-			/>
+		<div class="flex items-center gap-4">
+			<!-- Notifications (placeholder) -->
+			<button class="relative bg-transparent border-none text-xl text-gray-600 cursor-pointer p-2 rounded-lg transition-colors duration-200 hover:bg-gray-50" title="Értesítések">
+				<font-awesome-icon icon="bell" />
+				<span v-if="notificationCount > 0" class="absolute top-0 right-0 bg-red-500 text-white text-[0.65rem] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{{ notificationCount }}</span>
+			</button>
+
+			<!-- User Menu -->
+			<div ref="userMenuRef" class="relative cursor-pointer" @click="toggleUserMenu">
+				<div class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 hover:bg-gray-50">
+					<div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center font-semibold text-sm">
+						{{ userInitials }}
+					</div>
+					<div class="hidden md:flex flex-col gap-0.5">
+						<span class="font-semibold text-gray-800 text-sm">{{ userName }}</span>
+						<span class="text-xs text-gray-500">{{ primaryRole }}</span>
+					</div>
+					<font-awesome-icon icon="chevron-down" class="hidden md:block text-xs text-gray-400 transition-transform duration-200 group-hover:translate-y-0.5" />
+				</div>
+
+				<!-- Dropdown Menu -->
+				<div v-if="showUserMenu" class="absolute top-full right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg min-w-[220px] z-[1000]">
+					<div class="p-4 flex flex-col gap-1">
+						<strong class="text-gray-800 text-sm">{{ userName }}</strong>
+						<span class="text-gray-500 text-xs">{{ userEmail }}</span>
+					</div>
+
+					<div class="h-px bg-gray-200 my-2"></div>
+
+					<a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 no-underline transition-colors duration-200 hover:bg-gray-50" @click.prevent="goToProfile">
+						<font-awesome-icon icon="user" class="text-base text-gray-500" />
+						<span>Profil</span>
+					</a>
+
+					<a href="#" class="flex items-center gap-3 px-4 py-3 text-gray-600 no-underline transition-colors duration-200 hover:bg-gray-50" @click.prevent="goToSettings">
+						<font-awesome-icon icon="gear" class="text-base text-gray-500" />
+						<span>Beállítások</span>
+					</a>
+
+					<div class="h-px bg-gray-200 my-2"></div>
+
+					<a href="#" class="flex items-center gap-3 px-4 py-3 text-red-600 no-underline transition-colors duration-200 hover:bg-gray-50" @click.prevent="handleLogout">
+						<font-awesome-icon icon="right-from-bracket" class="text-base text-red-600" />
+						<span>Kijelentkezés</span>
+					</a>
+				</div>
+			</div>
 		</div>
-		<div v-else class="hidden md:flex flex-1"></div>
-
-		<!-- Right: Notifications and user menu -->
-		<nav class="flex items-center gap-2">
-			<!-- Notifications bell with badge -->
-			<div class="relative">
-				<button
-					type="button"
-					class="relative inline-flex items-center justify-center rounded-md p-2 text-gray-600 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-					@click="showNotifications = !showNotifications"
-					aria-label="Notifications"
-					ref="notificationsButtonRef"
-				>
-					<FontAwesomeIcon :icon="['fas', 'bell']" class="h-5 w-5" />
-					<span
-						v-if="notificationCount > 0"
-						class="absolute top-0 right-0 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white"
-						aria-label="Notification count"
-					>
-						{{ notificationCount > 9 ? '9+' : notificationCount }}
-					</span>
-				</button>
-
-				<!-- Notifications dropdown -->
-				<Transition
-					enter-active-class="transition ease-out duration-100"
-					enter-from-class="transform opacity-0 scale-95"
-					enter-to-class="transform opacity-100 scale-100"
-					leave-active-class="transition ease-in duration-75"
-					leave-from-class="transform opacity-100 scale-100"
-					leave-to-class="transform opacity-0 scale-95"
-				>
-					<div
-						v-if="showNotifications"
-						ref="notificationsRef"
-						class="absolute right-0 mt-2 w-80 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50 max-h-96 overflow-y-auto"
-						role="menu"
-					>
-						<div class="px-4 py-3 border-b border-gray-200">
-							<p class="text-sm font-semibold text-gray-900">Notifications</p>
-						</div>
-						<div class="py-2">
-							<p v-if="notificationCount === 0" class="px-4 py-8 text-center text-sm text-gray-500">
-								No notifications
-							</p>
-							<!-- Notification items can be added here -->
-						</div>
-					</div>
-				</Transition>
-			</div>
-
-			<!-- User menu dropdown -->
-			<div class="relative">
-				<button
-					type="button"
-					class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 transition-colors"
-					@click="showUserMenu = !showUserMenu"
-					aria-label="User menu"
-					ref="userMenuButtonRef"
-				>
-					<FontAwesomeIcon :icon="['fas', 'user']" class="h-5 w-5" />
-					<span class="hidden sm:inline-block truncate max-w-[120px]">
-						{{ userDisplayName }}
-					</span>
-				</button>
-
-				<!-- User menu dropdown -->
-				<Transition
-					enter-active-class="transition ease-out duration-100"
-					enter-from-class="transform opacity-0 scale-95"
-					enter-to-class="transform opacity-100 scale-100"
-					leave-active-class="transition ease-in duration-75"
-					leave-from-class="transform opacity-100 scale-100"
-					leave-to-class="transform opacity-0 scale-95"
-				>
-					<div
-						v-if="showUserMenu"
-						ref="userMenuRef"
-						class="absolute right-0 mt-2 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-50"
-						role="menu"
-						aria-orientation="vertical"
-					>
-						<div class="px-4 py-3 border-b border-gray-200">
-							<p class="text-sm font-medium text-gray-900 truncate">
-								{{ userDisplayName }}
-							</p>
-							<p class="text-xs text-gray-500 truncate">
-								{{ userEmail }}
-							</p>
-						</div>
-						<div class="py-1">
-							<button
-								type="button"
-								class="flex w-full items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-								@click="handleLogout"
-								role="menuitem"
-							>
-								<FontAwesomeIcon :icon="['fas', 'right-from-bracket']" class="h-4 w-4" />
-								<span>Logout</span>
-							</button>
-						</div>
-					</div>
-				</Transition>
-			</div>
-		</nav>
 	</header>
-	</div>
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
-import { storeToRefs } from 'pinia';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import BaseSelect from '../base/BaseSelect.vue';
 import { useAuthStore } from '@/stores/authStore';
-import { useUIStore } from '@/stores/uiStore';
-import type { CompanyDto } from '@/types/auth.types';
+import { useToast } from '@/composables/useToast';
 
-/**
- * TopBar component props
- */
-interface TopBarProps {
-	/** Selected company ID */
-	selectedCompanyId?: number | null;
-	/** Notification count */
-	notificationCount?: number;
-}
-
-const props = withDefaults(defineProps<TopBarProps>(), {
-	selectedCompanyId: null,
-	notificationCount: 0
-});
-
-const emit = defineEmits<{
-	/** Emitted when company selection changes */
-	(e: 'update:selectedCompanyId', value: number | null): void;
-	/** Emitted when sidebar toggle is clicked (mobile) */
-	(e: 'toggle-sidebar'): void;
+defineEmits<{
+	'toggle-sidebar': []
 }>();
 
-const authStore = useAuthStore();
-const uiStore = useUIStore();
 const router = useRouter();
+const authStore = useAuthStore();
+const { success } = useToast();
 
-const { sidebarCollapsed } = storeToRefs(uiStore);
-
-const showUserMenu = ref(false);
-const showNotifications = ref(false);
+// State
+const showUserMenu = ref<boolean>(false);
+const notificationCount = ref<number>(0); // Placeholder
 const userMenuRef = ref<HTMLElement | null>(null);
-const userMenuButtonRef = ref<HTMLElement | null>(null);
-const notificationsRef = ref<HTMLElement | null>(null);
-const notificationsButtonRef = ref<HTMLElement | null>(null);
 
-// Mock user data - replace with actual user from authStore
-const userEmail = computed(() => authStore.userEmail || 'user@example.com');
-const userDisplayName = computed(() => {
-	// This should come from authStore.user when implemented
-	return userEmail.value.split('@')[0];
+// Computed
+const userName = computed(() => authStore.userName || 'User');
+const userEmail = computed(() => authStore.user?.email || '');
+const primaryRole = computed(() => {
+	const roles = authStore.userRoles;
+	if (roles.includes('Admin')) return 'Admin';
+	if (roles.includes('ElevatedApprover')) return 'Felső Jóváhagyó';
+	if (roles.includes('Approver')) return 'Jóváhagyó';
+	if (roles.includes('Accountant')) return 'Könyvelő';
+	return 'Felhasználó';
+});
+const userInitials = computed(() => {
+	const user = authStore.user;
+	if (!user) return 'U';
+	const first = user.firstName?.charAt(0) || '';
+	const last = user.lastName?.charAt(0) || '';
+	return (first + last).toUpperCase() || 'U';
+});
+const pageTitle = computed(() => {
+	// TODO: Get from route meta or store
+	return 'Dashboard';
 });
 
-// Mock companies - replace with actual companies from authStore
-const companies = computed<CompanyDto[]>(() => {
-	// This should come from authStore.user?.companies when implemented
-	return [];
-});
-
-const hasMultipleCompanies = computed(() => companies.value.length > 1);
-
-const companyOptions = computed(() => {
-	return companies.value.map((c) => ({
-		label: c.name,
-		value: c.id
-	}));
-});
-
-const selectedCompanyId = computed(() => props.selectedCompanyId);
-
-function onCompanyChange(val: unknown) {
-	const num = typeof val === 'number' ? val : null;
-	emit('update:selectedCompanyId', num);
+// Methods
+function toggleUserMenu() {
+	showUserMenu.value = !showUserMenu.value;
 }
 
-function handleLogout() {
-	authStore.logout();
-	router.push({ name: 'login' });
+function closeUserMenu() {
 	showUserMenu.value = false;
 }
 
-function handleClickOutside(e: MouseEvent) {
-	const target = e.target as Node;
-
-	if (showUserMenu.value && userMenuRef.value && userMenuButtonRef.value) {
-		if (!userMenuRef.value.contains(target) && !userMenuButtonRef.value.contains(target)) {
-			showUserMenu.value = false;
-		}
-	}
-
-	if (showNotifications.value && notificationsRef.value && notificationsButtonRef.value) {
-		if (!notificationsRef.value.contains(target) && !notificationsButtonRef.value.contains(target)) {
-			showNotifications.value = false;
-		}
-	}
+function goToProfile() {
+	closeUserMenu();
+	router.push('/profile');
 }
 
-function handleEscape(e: KeyboardEvent) {
-	if (e.key === 'Escape') {
-		showUserMenu.value = false;
-		showNotifications.value = false;
+function goToSettings() {
+	closeUserMenu();
+	router.push('/settings');
+}
+
+async function handleLogout() {
+	closeUserMenu();
+	authStore.logout();
+	success('Sikeresen kijelentkezett');
+	router.push('/login');
+}
+
+// Close dropdown when clicking outside
+function handleClickOutside(event: MouseEvent) {
+	const target = event.target as HTMLElement;
+	if (userMenuRef.value && !userMenuRef.value.contains(target)) {
+		closeUserMenu();
 	}
 }
 
 onMounted(() => {
-	document.addEventListener('mousedown', handleClickOutside);
-	document.addEventListener('keydown', handleEscape);
+	document.addEventListener('click', handleClickOutside);
 });
 
-onBeforeUnmount(() => {
-	document.removeEventListener('mousedown', handleClickOutside);
-	document.removeEventListener('keydown', handleEscape);
+onUnmounted(() => {
+	document.removeEventListener('click', handleClickOutside);
 });
 </script>

@@ -14,5 +14,6 @@
         // Many-to-many kapcsolat a cégekkel
         public ICollection<UserCompany> UserCompanies { get; set; } = new List<UserCompany>();
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+        public ICollection<UserGroupMember> GroupMemberships { get; set; } = new List<UserGroupMember>();
     }
 }
