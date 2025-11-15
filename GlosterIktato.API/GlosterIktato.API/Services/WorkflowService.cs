@@ -10,11 +10,13 @@ namespace GlosterIktato.API.Services
     /// Workflow Engine Service
     /// Hardcoded transitions: Draft → PendingApproval → [ElevatedApproval] → Accountant → Done
     /// Értékhatár logika: GrossAmount > threshold → ElevatedApproval
+    /// UserGroup round-robin assignment support
     /// </summary>
     public class WorkflowService : IWorkflowService
     {
         private readonly ApplicationDbContext _context;
         private readonly IConfiguration _configuration;
+        private readonly IUserGroupService _userGroupService;
         private readonly ILogger<WorkflowService> _logger;
 
         // Értékhatár (HUF) - felette Elevated Approval kell
@@ -23,10 +25,12 @@ namespace GlosterIktato.API.Services
         public WorkflowService(
             ApplicationDbContext context,
             IConfiguration configuration,
+            IUserGroupService userGroupService,
             ILogger<WorkflowService> logger)
         {
             _context = context;
             _configuration = configuration;
+            _userGroupService = userGroupService;
             _logger = logger;
 
             // Értékhatár config-ból (alapértelmezett: 500,000 HUF)
@@ -127,15 +131,19 @@ namespace GlosterIktato.API.Services
                     }
                 }
 
-                // Ha nincs manual assign, próbálj auto-assign-t szerepkör alapján
+                // Ha nincs manual assign, próbálj auto-assign-t UserGroup vagy Role alapján
                 if (!newAssignedUserId.HasValue)
                 {
-                    var autoAssignedUser = await AutoAssignUserByStatus(nextStatus, document.CompanyId);
-                    if (autoAssignedUser != null)
+                    var autoAssignedUserId = await AutoAssignUserByStatusAsync(nextStatus, document.CompanyId);
+                    if (autoAssignedUserId.HasValue)
                     {
-                        document.AssignedToUserId = autoAssignedUser.Id;
-                        newAssignedUserId = autoAssignedUser.Id;
-                        newAssignedUserName = $"{autoAssignedUser.FirstName} {autoAssignedUser.LastName}";
+                        var autoAssignedUser = await _context.Users.FindAsync(autoAssignedUserId.Value);
+                        if (autoAssignedUser != null)
+                        {
+                            document.AssignedToUserId = autoAssignedUser.Id;
+                            newAssignedUserId = autoAssignedUser.Id;
+                            newAssignedUserName = $"{autoAssignedUser.FirstName} {autoAssignedUser.LastName}";
+                        }
                     }
                     else
                     {
@@ -489,33 +497,75 @@ namespace GlosterIktato.API.Services
         }
 
         /// <summary>
-        /// Auto-assign user szerepkör alapján
-        /// Mapping: PendingApproval → Approver, ElevatedApproval → ElevatedApprover, Accountant → Accountant
+        /// Auto-assign user UserGroup (round-robin) vagy Role alapján
+        /// PRIORITY:
+        /// 1. UserGroup round-robin (ha létezik csoport)
+        /// 2. Fallback: Role-based (régi logika)
+        /// 
+        /// Mapping: 
+        /// - PendingApproval → "Approver" group/role
+        /// - ElevatedApproval → "ElevatedApprover" group/role
+        /// - Accountant → "Accountant" group/role
         /// </summary>
-        private async Task<User?> AutoAssignUserByStatus(string status, int companyId)
+        private async Task<int?> AutoAssignUserByStatusAsync(string status, int companyId)
         {
-            // Szerepkör mapping
-            var roleToFind = status switch
+            try
             {
-                DocumentStatuses.PendingApproval => "Approver",
-                DocumentStatuses.ElevatedApproval => "ElevatedApprover",
-                DocumentStatuses.Accountant => "Accountant",
-                _ => null
-            };
+                // GroupType mapping
+                string? groupType = status switch
+                {
+                    DocumentStatuses.PendingApproval => "Approver",
+                    DocumentStatuses.ElevatedApproval => "ElevatedApprover",
+                    DocumentStatuses.Accountant => "Accountant",
+                    _ => null
+                };
 
-            if (roleToFind == null)
+                if (string.IsNullOrEmpty(groupType))
+                {
+                    _logger.LogWarning("Unknown status for auto-assign: {Status}", status);
+                    return null;
+                }
+
+                // 1. PRIORITY: UserGroup round-robin kiválasztás
+                var userId = await _userGroupService.GetNextUserFromGroupAsync(companyId, groupType);
+
+                if (userId.HasValue)
+                {
+                    _logger.LogInformation("Auto-assigned user {UserId} from UserGroup type {GroupType} (round-robin) for company {CompanyId}",
+                        userId.Value, groupType, companyId);
+                    return userId;
+                }
+
+                // 2. FALLBACK: Ha nincs UserGroup, akkor Role-based assignment (régi logika)
+                _logger.LogWarning("No UserGroup found for type {GroupType} in company {CompanyId}, falling back to Role-based assignment",
+                    groupType, companyId);
+
+                var roleBasedUser = await _context.UserRoles
+                    .Include(ur => ur.User)
+                        .ThenInclude(u => u.UserCompanies)
+                    .Include(ur => ur.Role)
+                    .Where(ur => ur.Role.Name == groupType && ur.User.IsActive)
+                    .Select(ur => ur.User)
+                    .FirstOrDefaultAsync(u => u.UserCompanies.Any(uc => uc.CompanyId == companyId));
+
+                if (roleBasedUser != null)
+                {
+                    _logger.LogInformation("Fallback: Auto-assigned user {UserId} from Role {Role} for company {CompanyId}",
+                        roleBasedUser.Id, groupType, companyId);
+                    return roleBasedUser.Id;
+                }
+
+                _logger.LogWarning("No user found for auto-assign (company: {CompanyId}, groupType: {GroupType})",
+                    companyId, groupType);
+
                 return null;
-
-            // Első user az adott szerepkörrel + céghez hozzáféréssel
-            var user = await _context.UserRoles
-                .Include(ur => ur.User)
-                    .ThenInclude(u => u.UserCompanies)
-                .Include(ur => ur.Role)
-                .Where(ur => ur.Role.Name == roleToFind && ur.User.IsActive)
-                .Select(ur => ur.User)
-                .FirstOrDefaultAsync(u => u.UserCompanies.Any(uc => uc.CompanyId == companyId));
-
-            return user;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in auto-assign for company {CompanyId} and status {Status}",
+                    companyId, status);
+                return null;
+            }
         }
     }
 }

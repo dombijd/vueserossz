@@ -6,7 +6,7 @@ namespace GlosterIktato.API.Data
     public class DbSeeder
     {
         public static async Task SeedAsync(ApplicationDbContext context)
-        {            
+        {
             // 1. CÉGEK
             if (!await context.Companies.AnyAsync())
             {
@@ -38,7 +38,7 @@ namespace GlosterIktato.API.Data
                 await context.SaveChangesAsync();
                 Console.WriteLine("✓ 3 cég létrehozva (P92, P93, P94)");
             }
-            
+
             // 2. SZEREPKÖRÖK
             if (!await context.Roles.AnyAsync())
             {
@@ -192,6 +192,270 @@ namespace GlosterIktato.API.Data
                 await context.UserRoles.AddRangeAsync(userRoles);
                 await context.SaveChangesAsync();
                 Console.WriteLine("✓ User-Role kapcsolatok létrehozva");
+            }
+
+            // 3.3 USER GROUPS (ÚJ!) ⭐
+            if (!await context.UserGroups.AnyAsync())
+            {
+                var company1 = await context.Companies.FirstAsync(c => c.Name.Contains("P92"));
+                var company2 = await context.Companies.FirstAsync(c => c.Name.Contains("P93"));
+                var company3 = await context.Companies.FirstAsync(c => c.Name.Contains("P94"));
+
+                var admin = await context.Users.FirstAsync(u => u.Email == "admin@gloster.hu");
+                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jóváhagyó@gloster.hu");
+                var vezeto = await context.Users.FirstAsync(u => u.Email == "vezeto@gloster.hu");
+                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelő@gloster.hu");
+                var asszisztens = await context.Users.FirstAsync(u => u.Email == "asszisztens@gloster.hu");
+
+                var userGroups = new List<UserGroup>
+                {
+                    // P92 Gloster Péksütemény - 3 csoport
+                    new UserGroup
+                    {
+                        Name = "P92 Finance Approvers",
+                        Description = "Pénzügyi jóváhagyók - P92 Péksütemény",
+                        GroupType = "Approver",
+                        CompanyId = company1.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new UserGroup
+                    {
+                        Name = "P92 Senior Approvers",
+                        Description = "Felső szintű jóváhagyók - P92 Péksütemény",
+                        GroupType = "ElevatedApprover",
+                        CompanyId = company1.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new UserGroup
+                    {
+                        Name = "P92 Accounting Team",
+                        Description = "Könyvelési csapat - P92 Péksütemény",
+                        GroupType = "Accountant",
+                        CompanyId = company1.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    },
+
+                    // P93 Gloster Logistics - 3 csoport
+                    new UserGroup
+                    {
+                        Name = "P93 Logistics Approvers",
+                        Description = "Logisztikai jóváhagyók - P93 Logistics",
+                        GroupType = "Approver",
+                        CompanyId = company2.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new UserGroup
+                    {
+                        Name = "P93 Management Approvers",
+                        Description = "Vezetői jóváhagyók - P93 Logistics",
+                        GroupType = "ElevatedApprover",
+                        CompanyId = company2.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new UserGroup
+                    {
+                        Name = "P93 Accounting Team",
+                        Description = "Könyvelési csapat - P93 Logistics",
+                        GroupType = "Accountant",
+                        CompanyId = company2.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    },
+
+                    // P94 Gloster Trade - 3 csoport
+                    new UserGroup
+                    {
+                        Name = "P94 Trade Approvers",
+                        Description = "Kereskedelmi jóváhagyók - P94 Trade",
+                        GroupType = "Approver",
+                        CompanyId = company3.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new UserGroup
+                    {
+                        Name = "P94 Executive Approvers",
+                        Description = "Vezérigazgatói jóváhagyók - P94 Trade",
+                        GroupType = "ElevatedApprover",
+                        CompanyId = company3.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    },
+                    new UserGroup
+                    {
+                        Name = "P94 Accounting Team",
+                        Description = "Könyvelési csapat - P94 Trade",
+                        GroupType = "Accountant",
+                        CompanyId = company3.Id,
+                        IsActive = true,
+                        Priority = 0,
+                        RoundRobinIndex = 0,
+                        CreatedAt = DateTime.UtcNow
+                    }
+                };
+
+                await context.UserGroups.AddRangeAsync(userGroups);
+                await context.SaveChangesAsync();
+                Console.WriteLine($"✓ {userGroups.Count} User Group létrehozva (3 cég × 3 típus)");
+
+                // 3.4 USER GROUP MEMBERS (ÚJ!) ⭐
+                var p92FinanceApprovers = await context.UserGroups.FirstAsync(g => g.Name == "P92 Finance Approvers");
+                var p92SeniorApprovers = await context.UserGroups.FirstAsync(g => g.Name == "P92 Senior Approvers");
+                var p92AccountingTeam = await context.UserGroups.FirstAsync(g => g.Name == "P92 Accounting Team");
+
+                var p93LogisticsApprovers = await context.UserGroups.FirstAsync(g => g.Name == "P93 Logistics Approvers");
+                var p93ManagementApprovers = await context.UserGroups.FirstAsync(g => g.Name == "P93 Management Approvers");
+                var p93AccountingTeam = await context.UserGroups.FirstAsync(g => g.Name == "P93 Accounting Team");
+
+                var p94TradeApprovers = await context.UserGroups.FirstAsync(g => g.Name == "P94 Trade Approvers");
+                var p94ExecutiveApprovers = await context.UserGroups.FirstAsync(g => g.Name == "P94 Executive Approvers");
+                var p94AccountingTeam = await context.UserGroups.FirstAsync(g => g.Name == "P94 Accounting Team");
+
+                var userGroupMembers = new List<UserGroupMember>
+                {
+                    // P92 Finance Approvers - Jóváhagyó + Asszisztens
+                    new UserGroupMember
+                    {
+                        UserGroupId = p92FinanceApprovers.Id,
+                        UserId = jovahagyo.Id,
+                        RoleInGroup = "Lead",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+                    new UserGroupMember
+                    {
+                        UserGroupId = p92FinanceApprovers.Id,
+                        UserId = asszisztens.Id,
+                        RoleInGroup = "Member",
+                        Priority = 1,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+
+                    // P92 Senior Approvers - Vezető
+                    new UserGroupMember
+                    {
+                        UserGroupId = p92SeniorApprovers.Id,
+                        UserId = vezeto.Id,
+                        RoleInGroup = "Lead",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+
+                    // P92 Accounting Team - Könyvelő
+                    new UserGroupMember
+                    {
+                        UserGroupId = p92AccountingTeam.Id,
+                        UserId = konyvelő.Id,
+                        RoleInGroup = "Accountant",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+
+                    // P93 Logistics Approvers - Vezető (hiszen ő mindenhol van)
+                    new UserGroupMember
+                    {
+                        UserGroupId = p93LogisticsApprovers.Id,
+                        UserId = vezeto.Id,
+                        RoleInGroup = "Lead",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+
+                    // P93 Management Approvers - Vezető
+                    new UserGroupMember
+                    {
+                        UserGroupId = p93ManagementApprovers.Id,
+                        UserId = vezeto.Id,
+                        RoleInGroup = "Lead",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+
+                    // P93 Accounting Team - Könyvelő
+                    new UserGroupMember
+                    {
+                        UserGroupId = p93AccountingTeam.Id,
+                        UserId = konyvelő.Id,
+                        RoleInGroup = "Accountant",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+
+                    // P94 Trade Approvers - Jóváhagyó
+                    new UserGroupMember
+                    {
+                        UserGroupId = p94TradeApprovers.Id,
+                        UserId = jovahagyo.Id,
+                        RoleInGroup = "Lead",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+
+                    // P94 Executive Approvers - Vezető
+                    new UserGroupMember
+                    {
+                        UserGroupId = p94ExecutiveApprovers.Id,
+                        UserId = vezeto.Id,
+                        RoleInGroup = "Lead",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    },
+
+                    // P94 Accounting Team - Könyvelő
+                    new UserGroupMember
+                    {
+                        UserGroupId = p94AccountingTeam.Id,
+                        UserId = konyvelő.Id,
+                        RoleInGroup = "Accountant",
+                        Priority = 0,
+                        IsActive = true,
+                        JoinedAt = DateTime.UtcNow,
+                        AddedByUserId = admin.Id
+                    }
+                };
+
+                await context.UserGroupMembers.AddRangeAsync(userGroupMembers);
+                await context.SaveChangesAsync();
+                Console.WriteLine($"✓ {userGroupMembers.Count} User Group Member létrehozva");
             }
 
             // 4. DOKUMENTUMTÍPUSOK

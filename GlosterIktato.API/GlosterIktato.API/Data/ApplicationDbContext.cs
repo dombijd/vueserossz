@@ -21,6 +21,8 @@ namespace GlosterIktato.API.Data
         public DbSet<UserRole> UserRoles { get; set; }
         public DbSet<UserCompany> UserCompanies { get; set; }
         public DbSet<DocumentRelation> DocumentRelations { get; set; }
+        public DbSet<UserGroup> UserGroups { get; set; }
+        public DbSet<UserGroupMember> UserGroupMembers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -129,9 +131,78 @@ namespace GlosterIktato.API.Data
                     .IsUnique();
             });
 
-            // INDEXEK (Performance optimalizálás)
+            modelBuilder.Entity<UserGroup>(entity =>
+            {
+                entity.HasKey(ug => ug.Id);
 
-            modelBuilder.Entity<Document>()
+                entity.Property(ug => ug.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(ug => ug.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(ug => ug.GroupType)
+                    .HasMaxLength(50);
+
+                // Company kapcsolat
+                entity.HasOne(ug => ug.Company)
+                    .WithMany()
+                    .HasForeignKey(ug => ug.CompanyId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Index-ek a gyorsabb kereséshez
+                entity.HasIndex(ug => ug.CompanyId);
+                entity.HasIndex(ug => ug.GroupType);
+                entity.HasIndex(ug => new { ug.CompanyId, ug.GroupType, ug.IsActive });
+
+                // Unique constraint - ugyanaz a név ne létezzen kétszer egy cégnél
+                entity.HasIndex(ug => new { ug.CompanyId, ug.Name })
+                    .IsUnique();
+            });
+
+            // ============================================================
+            // USER GROUP MEMBER KONFIGURÁCIÓ
+            // ============================================================
+
+            modelBuilder.Entity<UserGroupMember>(entity =>
+            {
+                entity.HasKey(ugm => ugm.Id);
+
+                // UserGroup kapcsolat
+                entity.HasOne(ugm => ugm.UserGroup)
+                    .WithMany(ug => ug.Members)
+                    .HasForeignKey(ugm => ugm.UserGroupId)
+                    .OnDelete(DeleteBehavior.Cascade); // Ha csoport törlődik, tagság is törlődik
+
+                // User kapcsolat
+                entity.HasOne(ugm => ugm.User)
+                    .WithMany(u => u.GroupMemberships)
+                    .HasForeignKey(ugm => ugm.UserId)
+                    .OnDelete(DeleteBehavior.Cascade); // Ha user törlődik, tagság is törlődik
+
+                // AddedBy kapcsolat
+                entity.HasOne(ugm => ugm.AddedBy)
+                    .WithMany()
+                    .HasForeignKey(ugm => ugm.AddedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(ugm => ugm.RoleInGroup)
+                    .HasMaxLength(50);
+
+                // Index-ek
+                entity.HasIndex(ugm => ugm.UserGroupId);
+                entity.HasIndex(ugm => ugm.UserId);
+                entity.HasIndex(ugm => new { ugm.UserGroupId, ugm.IsActive });
+
+                // Unique constraint - egy user csak egyszer lehet tagja egy csoportnak
+                entity.HasIndex(ugm => new { ugm.UserGroupId, ugm.UserId })
+                    .IsUnique();
+            });
+
+        // INDEXEK (Performance optimalizálás)
+
+        modelBuilder.Entity<Document>()
                 .HasIndex(d => d.ArchiveNumber)
                 .IsUnique(); // Iktatószám egyedi kell legyen
 
