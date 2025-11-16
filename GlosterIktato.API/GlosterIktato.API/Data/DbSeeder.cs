@@ -634,7 +634,10 @@ namespace GlosterIktato.API.Data
                 Console.WriteLine($"✓ {suppliers.Count} szállító létrehozva");
             }
 
-            // 6. DEMO DOKUMENTUMOK (20-30 db különböző státuszokkal)
+            // 6. DEMO DOKUMENTUMOK (DISABLED - documents without physical files cause issues)
+            // Commented out to prevent creating documents without actual file storage
+            // If you need demo documents, upload them through the UI or implement Google Drive integration
+            /*
             if (!await context.Documents.AnyAsync())
             {
                 var company1 = await context.Companies.FirstAsync(c => c.Name.Contains("P92"));
@@ -764,6 +767,7 @@ namespace GlosterIktato.API.Data
                 await context.SaveChangesAsync();
                 Console.WriteLine($"✓ {histories.Count} history bejegyzés létrehozva");
             }
+            */
         }
     }
 }

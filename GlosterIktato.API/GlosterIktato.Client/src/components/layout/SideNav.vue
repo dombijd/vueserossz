@@ -129,13 +129,8 @@ const navItems = computed<SideNavItem[]>(() => [
 	},
 	{
 		label: 'Aktuális ügyeim',
-		to: '/current-cases',
-		icon: ['fas', 'list']
-	},
-	{
-		label: 'Dokumentumok listája',
 		to: '/documents',
-		icon: ['fas', 'file-invoice']
+		icon: ['fas', 'list']
 	},
 	{
 		label: 'Új dokumentum',

@@ -173,6 +173,66 @@ namespace GlosterIktato.API.Services
         }
 
         /// <summary>
+        /// Aktuális ügyeim - hozzám rendelt dokumentumok (pagination support)
+        /// </summary>
+        public async Task<PaginatedResult<DocumentResponseDto>> GetMyTasksAsync(int currentUserId, int page, int pageSize)
+        {
+            try
+            {
+                // User hozzáférési jogosultságai
+                var userCompanyIds = await _context.UserCompanies
+                    .Where(uc => uc.UserId == currentUserId)
+                    .Select(uc => uc.CompanyId)
+                    .ToListAsync();
+
+                // Base query - csak AssignedToUserId alapján szűrünk (requirement szerint)
+                var query = _context.Documents
+                    .Include(d => d.Company)
+                    .Include(d => d.DocumentType)
+                    .Include(d => d.Supplier)
+                    .Include(d => d.CreatedBy)
+                    .Include(d => d.AssignedTo)
+                    .Where(d => userCompanyIds.Contains(d.CompanyId)) // User csak saját cégeit látja
+                    .Where(d => d.AssignedToUserId == currentUserId) // Alapértelmezett szűrés: AssignedToUserId = currentUser
+                    .AsQueryable();
+
+                // Total count
+                var totalCount = await query.CountAsync();
+
+                // Pagination
+                var documents = await query
+                    .OrderByDescending(d => d.CreatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                // Map to DTO
+                var documentDtos = documents.Select(d => MapToResponseDto(d)).ToList();
+
+                return new PaginatedResult<DocumentResponseDto>
+                {
+                    Data = documentDtos,
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = totalCount,
+                    TotalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                };
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching my tasks for user {UserId}", currentUserId);
+                return new PaginatedResult<DocumentResponseDto>
+                {
+                    Data = new List<DocumentResponseDto>(),
+                    Page = page,
+                    PageSize = pageSize,
+                    TotalCount = 0,
+                    TotalPages = 0
+                };
+            }
+        }
+
+        /// <summary>
         /// Dokumentum részletes adatai
         /// </summary>
         public async Task<DocumentDetailDto?> GetDocumentByIdAsync(int documentId, int currentUserId)

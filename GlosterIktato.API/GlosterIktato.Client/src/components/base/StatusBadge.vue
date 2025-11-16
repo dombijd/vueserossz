@@ -5,14 +5,14 @@
 		:aria-label="`Status: ${status}`"
 	>
 		<FontAwesomeIcon :icon="statusIcon" class="h-3 w-3 shrink-0" />
-		<span>{{ status }}</span>
+		<span>{{ displayName }}</span>
 	</span>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { DocumentStatus, getStatusColor, getStatusIcon } from '@/types/document.types';
+import { DocumentStatus, getStatusColor, getStatusIcon, getStatusDisplayName } from '@/types/document.types';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 
 /**
@@ -31,6 +31,10 @@ const badgeClass = computed(() => {
 
 const statusIcon = computed<IconDefinition | [string, string]>(() => {
 	return getStatusIcon(props.status);
+});
+
+const displayName = computed(() => {
+	return getStatusDisplayName(props.status);
 });
 </script>
 

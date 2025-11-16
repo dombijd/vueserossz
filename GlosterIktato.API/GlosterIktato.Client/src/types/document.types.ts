@@ -61,27 +61,121 @@ export interface Document {
 }
 
 /**
+ * Document response DTO from backend API (camelCase to match backend JSON serialization)
+ */
+export interface DocumentResponseDto {
+	id: number;
+	archiveNumber: string;
+	originalFileName: string;
+	status: string;
+	invoiceNumber?: string | null;
+	issueDate?: string | null;
+	performanceDate?: string | null;
+	paymentDeadline?: string | null;
+	grossAmount?: number | null;
+	currency?: string | null;
+	companyId: number;
+	companyName: string;
+	documentTypeId: number;
+	documentTypeName: string;
+	documentTypeCode: string;
+	supplierId?: number | null;
+	supplierName?: string | null;
+	createdByUserId: number;
+	createdByName: string;
+	assignedToUserId?: number | null;
+	assignedToName?: string | null;
+	createdAt: string;
+	modifiedAt?: string | null;
+}
+
+/**
+ * Paginated result wrapper (camelCase to match backend JSON serialization)
+ */
+export interface PaginatedResult<T> {
+	data: T[];
+	page: number;
+	pageSize: number;
+	totalCount: number;
+	totalPages: number;
+}
+
+/**
  * Get status color for badge display
  * @param status - Document status
  * @returns TailwindCSS color class string
  */
 export function getStatusColor(status: DocumentStatus | string): string {
-	switch (status) {
-		case DocumentStatus.Draft:
-			return 'bg-gray-100 text-gray-800';
-		case DocumentStatus.InProgress:
-			return 'bg-blue-100 text-blue-800';
-		case DocumentStatus.Approved:
-			return 'bg-green-100 text-green-800';
-		case DocumentStatus.Rejected:
-			return 'bg-red-100 text-red-800';
-		case DocumentStatus.Completed:
-			return 'bg-emerald-100 text-emerald-800';
-		case DocumentStatus.Archived:
-			return 'bg-slate-100 text-slate-800';
-		default:
-			return 'bg-gray-100 text-gray-800';
+	// Backend status values
+	if (status === 'Draft' || status === DocumentStatus.Draft || status === 'Vázlat') {
+		return 'bg-gray-100 text-gray-800';
 	}
+	if (status === 'PendingApproval' || status === 'Jóváhagyásra vár') {
+		return 'bg-yellow-100 text-yellow-800';
+	}
+	if (status === 'ElevatedApproval' || status === 'Emelt szintű jóváhagyásra vár') {
+		return 'bg-orange-100 text-orange-800';
+	}
+	if (status === 'Accountant' || status === 'Könyvelőnél') {
+		return 'bg-blue-100 text-blue-800';
+	}
+	if (status === 'Done' || status === DocumentStatus.Completed || status === 'Kész' || status === 'Befejezett') {
+		return 'bg-emerald-100 text-emerald-800';
+	}
+	if (status === 'Rejected' || status === DocumentStatus.Rejected || status === 'Elutasítva' || status === 'Elutasított') {
+		return 'bg-red-100 text-red-800';
+	}
+	// Frontend enum values (for backward compatibility)
+	if (status === DocumentStatus.InProgress || status === 'Folyamatban') {
+		return 'bg-blue-100 text-blue-800';
+	}
+	if (status === DocumentStatus.Approved || status === 'Jóváhagyott') {
+		return 'bg-green-100 text-green-800';
+	}
+	if (status === DocumentStatus.Archived || status === 'Archivált') {
+		return 'bg-slate-100 text-slate-800';
+	}
+	// Default
+	return 'bg-gray-100 text-gray-800';
+}
+
+/**
+ * Get Hungarian display name for status
+ * @param status - Document status
+ * @returns Hungarian translation of the status
+ */
+export function getStatusDisplayName(status: DocumentStatus | string): string {
+	// Backend status values
+	if (status === 'Draft' || status === DocumentStatus.Draft || status === 'Vázlat') {
+		return 'Vázlat';
+	}
+	if (status === 'PendingApproval' || status === 'Jóváhagyásra vár') {
+		return 'Jóváhagyásra vár';
+	}
+	if (status === 'ElevatedApproval' || status === 'Emelt szintű jóváhagyásra vár') {
+		return 'Emelt szintű jóváhagyásra vár';
+	}
+	if (status === 'Accountant' || status === 'Könyvelőnél') {
+		return 'Könyvelőnél';
+	}
+	if (status === 'Done' || status === DocumentStatus.Completed || status === 'Kész' || status === 'Befejezett') {
+		return 'Kész';
+	}
+	if (status === 'Rejected' || status === DocumentStatus.Rejected || status === 'Elutasítva' || status === 'Elutasított') {
+		return 'Elutasítva';
+	}
+	// Frontend enum values (for backward compatibility)
+	if (status === DocumentStatus.InProgress || status === 'Folyamatban') {
+		return 'Folyamatban';
+	}
+	if (status === DocumentStatus.Approved || status === 'Jóváhagyott') {
+		return 'Jóváhagyott';
+	}
+	if (status === DocumentStatus.Archived || status === 'Archivált') {
+		return 'Archivált';
+	}
+	// Default - return as is
+	return status as string;
 }
 
 /**
@@ -90,20 +184,35 @@ export function getStatusColor(status: DocumentStatus | string): string {
  * @returns FontAwesome icon definition array [prefix, iconName]
  */
 export function getStatusIcon(status: DocumentStatus | string): [string, string] {
-	switch (status) {
-		case DocumentStatus.Draft:
-			return ['fas', 'file'];
-		case DocumentStatus.InProgress:
-			return ['fas', 'clock'];
-		case DocumentStatus.Approved:
-			return ['fas', 'check-circle'];
-		case DocumentStatus.Rejected:
-			return ['fas', 'times-circle'];
-		case DocumentStatus.Completed:
-			return ['fas', 'clipboard-check'];
-		case DocumentStatus.Archived:
-			return ['fas', 'circle'];
-		default:
-			return ['fas', 'file'];
+	// Backend status values
+	if (status === 'Draft' || status === DocumentStatus.Draft || status === 'Vázlat') {
+		return ['fas', 'file'];
 	}
+	if (status === 'PendingApproval' || status === 'Jóváhagyásra vár') {
+		return ['fas', 'clock'];
+	}
+	if (status === 'ElevatedApproval' || status === 'Emelt szintű jóváhagyásra vár') {
+		return ['fas', 'exclamation-circle'];
+	}
+	if (status === 'Accountant' || status === 'Könyvelőnél') {
+		return ['fas', 'calculator'];
+	}
+	if (status === 'Done' || status === DocumentStatus.Completed || status === 'Kész' || status === 'Befejezett') {
+		return ['fas', 'check-circle'];
+	}
+	if (status === 'Rejected' || status === DocumentStatus.Rejected || status === 'Elutasítva' || status === 'Elutasított') {
+		return ['fas', 'times-circle'];
+	}
+	// Frontend enum values (for backward compatibility)
+	if (status === DocumentStatus.InProgress || status === 'Folyamatban') {
+		return ['fas', 'clock'];
+	}
+	if (status === DocumentStatus.Approved || status === 'Jóváhagyott') {
+		return ['fas', 'check-circle'];
+	}
+	if (status === DocumentStatus.Archived || status === 'Archivált') {
+		return ['fas', 'archive'];
+	}
+	// Default
+	return ['fas', 'file'];
 }
