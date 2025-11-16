@@ -55,7 +55,7 @@
 									class="ml-4 rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
 									aria-label="Close modal"
 								>
-									<FontAwesomeIcon :icon="['fas', 'times']" class="h-5 w-5" />
+									<font-awesome-icon :icon="['fas', 'times']" class="h-5 w-5" />
 								</button>
 							</div>
 
@@ -81,7 +81,6 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 /**
  * Modal size variants

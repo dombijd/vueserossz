@@ -1,6 +1,9 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import LoginPage from '@/components/features/LoginPage.vue';
 import LandingPage from '@/components/features/LandingPage.vue';
+import DocumentUploadPage from '@/components/features/DocumentUploadPage.vue';
+import DocumentsListPage from '@/components/features/DocumentsListPage.vue';
+import DocumentDetailPage from '@/components/features/DocumentDetailPage.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
@@ -26,20 +29,20 @@ const router = createRouter({
 		{
 			path: '/documents',
 			name: 'documents',
-			component: LandingPage, // TODO: Replace with DocumentsPage
-			meta: { requiresAuth: true }
+			component: DocumentsListPage,
+			meta: { requiresAuth: true, title: 'Aktuális Ügyeim' }
 		},
 		{
 			path: '/documents/upload',
 			name: 'documents-upload',
-			component: LandingPage, // TODO: Replace with DocumentUploadPage
+			component: DocumentUploadPage,
 			meta: { requiresAuth: true }
 		},
 		{
 			path: '/documents/:id',
 			name: 'document-detail',
-			component: LandingPage, // TODO: Replace with DocumentDetailPage
-			meta: { requiresAuth: true }
+			component: DocumentDetailPage,
+			meta: { requiresAuth: true, title: 'Dokumentum karton' }
 		},
 		// Settings
 		{

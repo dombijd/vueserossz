@@ -24,7 +24,7 @@
 				:aria-label="`File input${multiple ? ' (multiple allowed)' : ''}`"
 			/>
 			<div class="text-center">
-				<FontAwesomeIcon :icon="['fas', 'upload']" class="h-8 w-8 text-gray-400 mb-2" />
+				<font-awesome-icon :icon="['fas', 'upload']" class="h-8 w-8 text-gray-400 mb-2" />
 				<p class="text-sm text-gray-600">
 					<span class="font-medium text-blue-600">Click to upload</span>
 					or drag and drop
@@ -70,7 +70,7 @@
 					class="shrink-0 p-1 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
 					:aria-label="`Remove ${file.name}`"
 				>
-					<FontAwesomeIcon :icon="['fas', 'times']" class="h-4 w-4" />
+					<font-awesome-icon :icon="['fas', 'times']" class="h-4 w-4" />
 				</button>
 			</div>
 		</div>
@@ -79,7 +79,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 /**
  * File with upload metadata
@@ -113,6 +112,8 @@ const props = withDefaults(defineProps<FileUploadProps>(), {
 const emit = defineEmits<{
 	/** Emitted when files are selected */
 	(e: 'files-selected', files: File[]): void;
+	/** Emitted when files are selected with metadata */
+	(e: 'files-selected-with-metadata', files: Array<{ file: File; id: string }>): void;
 }>();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -168,6 +169,11 @@ function processFiles(fileList: FileList | null) {
 
 	if (newFiles.length > 0) {
 		emit('files-selected', newFiles);
+		// Also emit with metadata for progress tracking
+		const filesWithMetadata = files.value
+			.filter(f => newFiles.includes(f.file))
+			.map(f => ({ file: f.file, id: f.id }));
+		emit('files-selected-with-metadata', filesWithMetadata);
 	}
 }
 
@@ -225,6 +231,13 @@ defineExpose({
 	},
 	clearFiles: () => {
 		files.value = [];
+	},
+	getFileId: (file: File): string | undefined => {
+		const fileMetadata = files.value.find(f => 
+			f.file === file || 
+			(f.file.name === file.name && f.file.size === file.size && f.file.lastModified === file.lastModified)
+		);
+		return fileMetadata?.id;
 	}
 });
 </script>

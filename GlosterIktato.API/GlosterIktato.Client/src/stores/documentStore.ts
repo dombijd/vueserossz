@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import api from '../services/api';
-import type { Document } from '../types/document.types';
+import type { Document, DocumentResponseDto, PaginatedResult } from '../types/document.types';
 
 export interface FetchDocumentsParams {
 	query?: string;
@@ -80,6 +80,22 @@ export const useDocumentStore = defineStore('documentStore', () => {
 		}
 	}
 
+	async function fetchMyTasks(page: number = 1, pageSize: number = 20): Promise<PaginatedResult<DocumentResponseDto>> {
+		isLoading.value = true;
+		error.value = null;
+		try {
+			const response = await api.get<PaginatedResult<DocumentResponseDto>>('/documents/my-tasks', {
+				params: { page, pageSize }
+			});
+			return response.data;
+		} catch (err: unknown) {
+			error.value = (err as Error)?.message ?? 'Failed to fetch my tasks';
+			throw err;
+		} finally {
+			isLoading.value = false;
+		}
+	}
+
 	return {
 		documents,
 		isLoading,
@@ -87,7 +103,8 @@ export const useDocumentStore = defineStore('documentStore', () => {
 		fetchDocuments,
 		createDocument,
 		updateDocument,
-		deleteDocument
+		deleteDocument,
+		fetchMyTasks
 	};
 });
 

@@ -7,20 +7,20 @@
 		:aria-disabled="isDisabled || isLoading ? 'true' : 'false'"
 	>
 		<span class="inline-flex items-center gap-2">
-			<FontAwesomeIcon
+			<font-awesome-icon
 				v-if="leftIcon && !isLoading"
 				:icon="leftIcon"
 				class="shrink-0"
 				:class="iconSizeClass"
 			/>
-			<FontAwesomeIcon
+			<font-awesome-icon
 				v-if="isLoading"
 				:icon="['fas','spinner']"
 				class="animate-spin shrink-0"
 				:class="iconSizeClass"
 			/>
 			<span><slot /></span>
-			<FontAwesomeIcon
+			<font-awesome-icon
 				v-if="rightIcon && !isLoading"
 				:icon="rightIcon"
 				class="shrink-0"
@@ -33,8 +33,7 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import type { IconDefinition, IconProp } from '@fortawesome/fontawesome-svg-core';
+import type { IconDefinition, IconProp } from '@/types/fontawesome.types';
 
 type ButtonVariant = 'primary' | 'secondary' | 'success' | 'danger' | 'ghost';
 type ButtonSize = 'sm' | 'md' | 'lg';

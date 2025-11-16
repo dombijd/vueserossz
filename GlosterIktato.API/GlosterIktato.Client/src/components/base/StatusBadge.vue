@@ -4,16 +4,15 @@
 		class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium"
 		:aria-label="`Status: ${status}`"
 	>
-		<FontAwesomeIcon :icon="statusIcon" class="h-3 w-3 shrink-0" />
-		<span>{{ status }}</span>
+		<font-awesome-icon :icon="statusIcon" class="h-3 w-3 shrink-0" />
+		<span>{{ displayName }}</span>
 	</span>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import { DocumentStatus, getStatusColor, getStatusIcon } from '@/types/document.types';
-import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import { DocumentStatus, getStatusColor, getStatusIcon, getStatusDisplayName } from '@/types/document.types';
+import type { IconDefinition } from '@/types/fontawesome.types';
 
 /**
  * StatusBadge component props
@@ -31,6 +30,10 @@ const badgeClass = computed(() => {
 
 const statusIcon = computed<IconDefinition | [string, string]>(() => {
 	return getStatusIcon(props.status);
+});
+
+const displayName = computed(() => {
+	return getStatusDisplayName(props.status);
 });
 </script>
 
