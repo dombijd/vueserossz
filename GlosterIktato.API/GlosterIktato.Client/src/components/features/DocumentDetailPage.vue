@@ -1174,20 +1174,19 @@ function resetZoom() {
 
 async function downloadDocument() {
 	try {
-		const baseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5156/api';
-		const response = await api.get(`${baseURL}/documents/${documentId.value}/download`, {
+		const response = await api.get(`/documents/${documentId.value}/download`, {
 			responseType: 'blob',
 		});
 		
 		// Create blob and download
 		const blob = new Blob([response.data], { type: 'application/pdf' });
 		const url = URL.createObjectURL(blob);
-		const link = document.createElement('a');
+		const link = window.document.createElement('a');
 		link.href = url;
 		link.download = document.value?.originalFileName || 'document.pdf';
-		document.body.appendChild(link);
+		window.document.body.appendChild(link);
 		link.click();
-		document.body.removeChild(link);
+		window.document.body.removeChild(link);
 		URL.revokeObjectURL(url);
 		success('Dokumentum letöltve');
 	} catch (err) {
