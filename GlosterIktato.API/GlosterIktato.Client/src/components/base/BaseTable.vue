@@ -1,6 +1,7 @@
 <template>
 	<div class="w-full overflow-x-auto">
-		<table class="min-w-full divide-y divide-gray-200" role="table" aria-label="Data table">
+		<SkeletonLoader v-if="loading" type="table" :rows="5" />
+		<table v-else class="min-w-full divide-y divide-gray-200" role="table" aria-label="Data table">
 			<thead class="bg-gray-50">
 				<tr>
 					<th
@@ -55,19 +56,8 @@
 				</tr>
 			</thead>
 			<tbody class="bg-white divide-y divide-gray-200">
-				<!-- Loading skeleton -->
-				<template v-if="loading">
-					<tr v-for="i in 5" :key="`skeleton-${i}`">
-						<td v-if="selectable" class="px-6 py-4 whitespace-nowrap">
-							<div class="h-4 w-4 bg-gray-200 rounded animate-pulse"></div>
-						</td>
-						<td v-for="column in columns" :key="column.key" class="px-6 py-4 whitespace-nowrap">
-							<div class="h-4 bg-gray-200 rounded animate-pulse"></div>
-						</td>
-					</tr>
-				</template>
 				<!-- Data rows -->
-				<template v-else-if="data.length > 0">
+				<template v-if="data.length > 0">
 					<tr
 						v-for="(row, index) in data"
 						:key="getRowKey(row, index)"
@@ -111,6 +101,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
+import SkeletonLoader from './SkeletonLoader.vue';
 
 /**
  * Table column definition
