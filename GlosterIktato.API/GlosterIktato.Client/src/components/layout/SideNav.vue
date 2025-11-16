@@ -139,7 +139,7 @@ const navItems = computed<SideNavItem[]>(() => [
 	},
 	{
 		label: 'Új dokumentum',
-		to: '/documents/new',
+		to: '/documents/upload',
 		icon: ['fas', 'plus']
 	},
 	{

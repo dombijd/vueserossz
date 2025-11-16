@@ -43,10 +43,17 @@ namespace GlosterIktato.API.Services
                     return null;
                 }
 
-                // PDF ellenőrzés
-                if (!dto.File.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase))
+                // PDF ellenőrzés - ContentType és fájlnév alapján
+                var isPdfByContentType = !string.IsNullOrEmpty(dto.File.ContentType) &&
+                    dto.File.ContentType.Equals("application/pdf", StringComparison.OrdinalIgnoreCase);
+                
+                var isPdfByFileName = !string.IsNullOrEmpty(dto.File.FileName) &&
+                    dto.File.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+
+                if (!isPdfByContentType && !isPdfByFileName)
                 {
-                    _logger.LogWarning("Upload failed: Not a PDF file");
+                    _logger.LogWarning("Upload failed: Not a PDF file. ContentType: {ContentType}, FileName: {FileName}",
+                        dto.File.ContentType ?? "null", dto.File.FileName ?? "null");
                     return null;
                 }
 
@@ -815,6 +822,33 @@ namespace GlosterIktato.API.Services
             {
                 _logger.LogError(ex, "Error downloading document {DocumentId}", documentId);
                 return null;
+            }
+        }
+
+        /// <summary>
+        /// Dokumentum típusok lekérése
+        /// </summary>
+        public async Task<List<DocumentTypeDto>> GetDocumentTypesAsync()
+        {
+            try
+            {
+                var documentTypes = await _context.DocumentTypes
+                    .Where(dt => dt.IsActive)
+                    .OrderBy(dt => dt.Id)
+                    .Select(dt => new DocumentTypeDto
+                    {
+                        Id = dt.Id,
+                        Name = dt.Name,
+                        Code = dt.Code
+                    })
+                    .ToListAsync();
+
+                return documentTypes;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving document types");
+                throw;
             }
         }
 

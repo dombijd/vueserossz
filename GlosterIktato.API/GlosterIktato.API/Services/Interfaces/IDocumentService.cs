@@ -11,5 +11,6 @@ namespace GlosterIktato.API.Services.Interfaces
         Task<Stream?> DownloadDocumentAsync(int documentId, int currentUserId);
         Task<PaginatedResult<DocumentResponseDto>> GetDocumentsAsync(int userId, int? companyId, string? status, int? assignedToUserId, int page, int pageSize);
         Task<PaginatedResult<DocumentResponseDto>> SearchDocumentsAsync(int userId, DocumentSearchDto searchDto);
+        Task<List<DocumentTypeDto>> GetDocumentTypesAsync();
     }
 }

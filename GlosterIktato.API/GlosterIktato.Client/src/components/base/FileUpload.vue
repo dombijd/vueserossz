@@ -113,6 +113,8 @@ const props = withDefaults(defineProps<FileUploadProps>(), {
 const emit = defineEmits<{
 	/** Emitted when files are selected */
 	(e: 'files-selected', files: File[]): void;
+	/** Emitted when files are selected with metadata */
+	(e: 'files-selected-with-metadata', files: Array<{ file: File; id: string }>): void;
 }>();
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
@@ -168,6 +170,11 @@ function processFiles(fileList: FileList | null) {
 
 	if (newFiles.length > 0) {
 		emit('files-selected', newFiles);
+		// Also emit with metadata for progress tracking
+		const filesWithMetadata = files.value
+			.filter(f => newFiles.includes(f.file))
+			.map(f => ({ file: f.file, id: f.id }));
+		emit('files-selected-with-metadata', filesWithMetadata);
 	}
 }
 
@@ -225,6 +232,13 @@ defineExpose({
 	},
 	clearFiles: () => {
 		files.value = [];
+	},
+	getFileId: (file: File): string | undefined => {
+		const fileMetadata = files.value.find(f => 
+			f.file === file || 
+			(f.file.name === file.name && f.file.size === file.size && f.file.lastModified === file.lastModified)
+		);
+		return fileMetadata?.id;
 	}
 });
 </script>

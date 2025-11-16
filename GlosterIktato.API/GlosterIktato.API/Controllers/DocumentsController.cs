@@ -2,7 +2,6 @@
 using GlosterIktato.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 
 namespace GlosterIktato.API.Controllers
@@ -15,7 +14,9 @@ namespace GlosterIktato.API.Controllers
         private readonly IDocumentService _documentService;
         private readonly ILogger<DocumentsController> _logger;
 
-        public DocumentsController(IDocumentService documentService, ILogger<DocumentsController> logger)
+        public DocumentsController(
+            IDocumentService documentService, 
+            ILogger<DocumentsController> logger)
         {
             _documentService = documentService;
             _logger = logger;
@@ -30,6 +31,33 @@ namespace GlosterIktato.API.Controllers
             var userId = GetCurrentUserId();
             if (userId == 0)
                 return Unauthorized();
+
+            // Model validation
+            if (!ModelState.IsValid)
+            {
+                _logger.LogWarning("Upload failed: Model validation failed. Errors: {Errors}",
+                    string.Join(", ", ModelState.SelectMany(x => x.Value?.Errors.Select(e => e.ErrorMessage) ?? Enumerable.Empty<string>())));
+                return BadRequest(new { message = "Érvénytelen adatok", errors = ModelState });
+            }
+
+            // Additional validation
+            if (dto.File == null)
+            {
+                _logger.LogWarning("Upload failed: File is null");
+                return BadRequest(new { message = "Fájl megadása kötelező" });
+            }
+
+            if (dto.CompanyId <= 0)
+            {
+                _logger.LogWarning("Upload failed: Invalid CompanyId: {CompanyId}", dto.CompanyId);
+                return BadRequest(new { message = "Érvénytelen cég azonosító" });
+            }
+
+            if (dto.DocumentTypeId <= 0)
+            {
+                _logger.LogWarning("Upload failed: Invalid DocumentTypeId: {DocumentTypeId}", dto.DocumentTypeId);
+                return BadRequest(new { message = "Érvénytelen dokumentum típus azonosító" });
+            }
 
             var result = await _documentService.UploadDocumentAsync(dto, userId);
 
@@ -177,6 +205,25 @@ namespace GlosterIktato.API.Controllers
 
             // Return file with original filename
             return File(fileStream, "application/pdf", document.OriginalFileName);
+        }
+
+        /// <summary>
+        /// Dokumentum típusok lekérése
+        /// </summary>
+        [HttpGet("types")]
+        [ProducesResponseType(typeof(List<DocumentTypeDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetDocumentTypes()
+        {
+            try
+            {
+                var documentTypes = await _documentService.GetDocumentTypesAsync();
+                return Ok(documentTypes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving document types");
+                return StatusCode(500, new { message = "Hiba történt a dokumentum típusok lekérése során" });
+            }
         }
 
     }

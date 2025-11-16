@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import LoginPage from '@/components/features/LoginPage.vue';
 import LandingPage from '@/components/features/LandingPage.vue';
+import DocumentUploadPage from '@/components/features/DocumentUploadPage.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
@@ -32,7 +33,7 @@ const router = createRouter({
 		{
 			path: '/documents/upload',
 			name: 'documents-upload',
-			component: LandingPage, // TODO: Replace with DocumentUploadPage
+			component: DocumentUploadPage,
 			meta: { requiresAuth: true }
 		},
 		{
