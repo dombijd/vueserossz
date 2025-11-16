@@ -462,6 +462,10 @@
 							>
 								Iktatás lezárása
 							</BaseButton>
+							<div v-if="!canWorkflowAction && !canDelegate && !canReject && !canFinalize" class="text-sm text-gray-500 text-center py-2">
+								<p>Nincsenek elérhető műveletek</p>
+								<p class="text-xs mt-1">Státusz: {{ document?.status }}</p>
+							</div>
 						</div>
 					</BaseCard>
 				</div>

@@ -12,6 +12,7 @@
 				:inputmode="inputMode"
 				:placeholder="placeholder"
 				:disabled="disabled"
+				:step="step"
 				:class="inputClass"
 				:value="displayValue"
 				@input="onInput"
@@ -49,6 +50,7 @@ interface BaseInputProps<TValue = string | number | null> {
 	disabled?: boolean;
 	required?: boolean;
 	error?: string;
+	step?: string | number;
 }
 
 const props = withDefaults(defineProps<BaseInputProps>(), {
