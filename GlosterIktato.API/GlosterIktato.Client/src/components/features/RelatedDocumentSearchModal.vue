@@ -59,7 +59,7 @@
 								<div class="font-medium text-gray-900">{{ doc.archiveNumber }}</div>
 								<div class="text-sm text-gray-600">{{ doc.documentTypeName }}</div>
 								<div class="text-sm text-gray-500">{{ doc.supplierName || 'Nincs szállító' }}</div>
-								<div class="text-xs text-gray-400">{{ formatDate(doc.createdAt) }}</div>
+								<div class="text-xs text-gray-400">{{ formatDateShort(doc.createdAt) }}</div>
 							</div>
 							<BaseButton variant="primary" size="sm">Kiválasztás</BaseButton>
 						</div>
@@ -82,6 +82,7 @@ import BaseButton from '@/components/base/BaseButton.vue';
 import BaseInput from '@/components/base/BaseInput.vue';
 import BaseSelect from '@/components/base/BaseSelect.vue';
 import api from '@/services/api';
+import { formatDateShort } from '@/utils/date.utils';
 
 interface DocumentSearchResult {
 	id: number;
@@ -178,15 +179,6 @@ async function searchDocuments() {
 	} finally {
 		searching.value = false;
 	}
-}
-
-function formatDate(dateString: string): string {
-	const date = new Date(dateString);
-	return date.toLocaleDateString('hu-HU', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
 }
 
 function selectDocument(documentId: number) {

@@ -216,3 +216,158 @@ export function getStatusIcon(status: DocumentStatus | string): [string, string]
 	// Default
 	return ['fas', 'file'];
 }
+
+/**
+ * Document history entry DTO
+ */
+export interface DocumentHistoryDto {
+	id: number;
+	userId: number;
+	userName: string;
+	action: string;
+	fieldName?: string | null;
+	oldValue?: string | null;
+	newValue?: string | null;
+	comment?: string | null;
+	createdAt: string;
+}
+
+/**
+ * Document detail DTO with full information
+ */
+export interface DocumentDetailDto {
+	id: number;
+	archiveNumber: string;
+	originalFileName: string;
+	status: string;
+	invoiceNumber?: string | null;
+	issueDate?: string | null;
+	performanceDate?: string | null;
+	paymentDeadline?: string | null;
+	grossAmount?: number | null;
+	netAmount?: number | null;
+	taxAmount?: number | null;
+	currency?: string | null;
+	companyId: number;
+	companyName: string;
+	documentTypeId: number;
+	documentTypeName: string;
+	documentTypeCode: string;
+	supplierId?: number | null;
+	supplierName?: string | null;
+	createdByUserId: number;
+	createdByName: string;
+	assignedToUserId?: number | null;
+	assignedToName?: string | null;
+	createdAt: string;
+	modifiedAt?: string | null;
+	storagePath?: string;
+	customFields?: Record<string, any>;
+	history?: DocumentHistoryDto[];
+}
+
+/**
+ * Document relation DTO
+ */
+export interface DocumentRelationDto {
+	id: number;
+	documentId: number;
+	relatedDocumentId: number;
+	relatedDocumentArchiveNumber: string;
+	relatedDocumentTypeName: string;
+	relatedDocumentTypeCode?: string;
+	relatedDocumentSupplierName?: string;
+	relationType: string;
+	createdAt: string;
+	createdByName: string;
+}
+
+/**
+ * Document comment DTO
+ */
+export interface DocumentCommentDto {
+	id: number;
+	documentId: number;
+	userId: number;
+	userName: string;
+	text: string;
+	createdAt: string;
+	modifiedAt?: string | null;
+}
+
+/**
+ * Get badge color classes for document type
+ * @param code - Document type code
+ * @returns TailwindCSS color class string
+ */
+export function getDocumentTypeBadgeClass(code: string): string {
+	switch (code) {
+		case 'SZLA': return 'bg-blue-100 text-blue-800';
+		case 'TIG': return 'bg-green-100 text-green-800';
+		case 'SZ': return 'bg-purple-100 text-purple-800';
+		default: return 'bg-gray-100 text-gray-800';
+	}
+}
+
+/**
+ * Get Hungarian label for document history action
+ * @param action - Action code
+ * @returns Hungarian translation of the action
+ */
+export function getActionLabel(action: string): string {
+	const labels: Record<string, string> = {
+		'Created': 'Létrehozva',
+		'Updated': 'Módosítva',
+		'StatusChanged': 'Státusz változás',
+		'CommentAdded': 'Megjegyzés hozzáadva',
+		'Forwarded': 'Továbbküldve',
+		'Returned': 'Visszaküldve',
+		'Rejected': 'Elutasítva',
+		'Finalized': 'Lezárva',
+		'Assigned': 'Hozzárendelve',
+		'Delegated': 'Átadva',
+	};
+	return labels[action] || action;
+}
+
+/**
+ * Get icon for document history action
+ * @param action - Action code
+ * @returns FontAwesome icon definition array [prefix, iconName]
+ */
+export function getActionIcon(action: string): [string, string] {
+	const icons: Record<string, [string, string]> = {
+		'Created': ['fas', 'plus'],
+		'Updated': ['fas', 'edit'],
+		'StatusChanged': ['fas', 'arrows-rotate'],
+		'CommentAdded': ['fas', 'comment'],
+		'Forwarded': ['fas', 'arrow-right'],
+		'Returned': ['fas', 'arrow-left'],
+		'Rejected': ['fas', 'times-circle'],
+		'Finalized': ['fas', 'check-circle'],
+		'Assigned': ['fas', 'user'],
+		'Delegated': ['fas', 'user-plus'],
+	};
+	return icons[action] || ['fas', 'circle'];
+}
+
+/**
+ * Get badge color classes for document history action
+ * @param action - Action code
+ * @returns TailwindCSS color class string
+ */
+export function getActionBadgeClass(action: string): string {
+	switch (action) {
+		case 'Created': return 'bg-green-500';
+		case 'Updated': return 'bg-blue-500';
+		case 'StatusChanged': return 'bg-indigo-500';
+		case 'CommentAdded': return 'bg-purple-500';
+		case 'Forwarded': return 'bg-cyan-500';
+		case 'Returned': return 'bg-orange-500';
+		case 'Rejected': return 'bg-red-500';
+		case 'Finalized': return 'bg-emerald-500';
+		case 'Assigned': return 'bg-blue-600';
+		case 'Delegated': return 'bg-teal-500';
+		default: return 'bg-gray-500';
+	}
+}

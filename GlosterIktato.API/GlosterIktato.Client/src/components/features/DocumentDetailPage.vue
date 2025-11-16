@@ -92,7 +92,7 @@
 
 							<div>
 								<label class="block text-sm font-medium text-gray-700 mb-1">Létrehozva</label>
-								<p class="text-gray-600">{{ formatDate(document.createdAt) }}</p>
+								<p class="text-gray-600">{{ formatDateTime(document.createdAt) }}</p>
 							</div>
 
 							<div>
@@ -654,7 +654,10 @@ import BaseSelect from '@/components/base/BaseSelect.vue';
 import BaseModal from '@/components/base/BaseModal.vue';
 import StatusBadge from '@/components/base/StatusBadge.vue';
 import api from '@/services/api';
-import { getStatusColor, getStatusDisplayName } from '@/types/document.types';
+import { getStatusColor, getStatusDisplayName, getDocumentTypeBadgeClass } from '@/types/document.types';
+import { formatDateTime, formatDateForInput } from '@/utils/date.utils';
+import { copyToClipboard } from '@/utils/clipboard.utils';
+import { CURRENCY_OPTIONS } from '@/constants/app.constants';
 import SupplierAutocomplete from './SupplierAutocomplete.vue';
 import RelatedDocumentsList from './RelatedDocumentsList.vue';
 import CommentsSection from './CommentsSection.vue';
@@ -664,53 +667,8 @@ import DelegateModal from './DelegateModal.vue';
 import RelatedDocumentSearchModal from './RelatedDocumentSearchModal.vue';
 import FullscreenPdfModal from './FullscreenPdfModal.vue';
 
-// Types
-interface DocumentDetailDto {
-	id: number;
-	archiveNumber: string;
-	originalFileName: string;
-	status: string;
-	invoiceNumber?: string | null;
-	issueDate?: string | null;
-	performanceDate?: string | null;
-	paymentDeadline?: string | null;
-	grossAmount?: number | null;
-	currency?: string | null;
-	companyId: number;
-	companyName: string;
-	documentTypeId: number;
-	documentTypeName: string;
-	documentTypeCode: string;
-	supplierId?: number | null;
-	supplierName?: string | null;
-	createdByUserId: number;
-	createdByName: string;
-	assignedToUserId?: number | null;
-	assignedToName?: string | null;
-	createdAt: string;
-	modifiedAt?: string | null;
-	storagePath: string;
-	history: DocumentHistoryDto[];
-}
-
-interface DocumentHistoryDto {
-	id: number;
-	userId: number;
-	userName: string;
-	action: string;
-	fieldName?: string | null;
-	oldValue?: string | null;
-	newValue?: string | null;
-	comment?: string | null;
-	createdAt: string;
-}
-
-interface UserDto {
-	id: number;
-	email: string;
-	firstName: string;
-	lastName: string;
-}
+import type { DocumentDetailDto, DocumentHistoryDto } from '@/types/document.types';
+import type { UserDto } from '@/types/user.types';
 
 interface BcDataOption {
 	label: string;
@@ -849,11 +807,7 @@ const userOptions = computed(() => {
 	}));
 });
 
-const currencyOptions = [
-	{ label: 'HUF', value: 'HUF' },
-	{ label: 'EUR', value: 'EUR' },
-	{ label: 'USD', value: 'USD' },
-];
+const currencyOptions = CURRENCY_OPTIONS;
 
 const bcCostCenterOptions = computed(() => 
 	bcCostCenters.value.map(c => ({ label: `${c.value} - ${c.label}`, value: c.value }))
@@ -1125,39 +1079,6 @@ async function saveDocument() {
 	} finally {
 		saving.value = false;
 	}
-}
-
-function getDocumentTypeBadgeClass(code: string): string {
-	switch (code) {
-		case 'SZLA': return 'bg-blue-100 text-blue-800';
-		case 'TIG': return 'bg-green-100 text-green-800';
-		case 'SZ': return 'bg-purple-100 text-purple-800';
-		default: return 'bg-gray-100 text-gray-800';
-	}
-}
-
-function formatDate(dateString: string): string {
-	const date = new Date(dateString);
-	return date.toLocaleDateString('hu-HU', {
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	});
-}
-
-function formatDateForInput(dateString: string): string {
-	const date = new Date(dateString);
-	return date.toISOString().split('T')[0];
-}
-
-function copyToClipboard(text: string) {
-	navigator.clipboard.writeText(text).then(() => {
-		success('Másolva a vágólapra');
-	}).catch(() => {
-		toastError('Nem sikerült másolni');
-	});
 }
 
 function zoomIn() {

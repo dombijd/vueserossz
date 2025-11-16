@@ -34,7 +34,7 @@
 					<div class="flex-1 pb-4">
 						<div class="flex items-center gap-2 mb-1">
 							<span class="font-medium text-gray-900">{{ item.userName }}</span>
-							<span class="text-xs text-gray-500">{{ formatDate(item.createdAt) }}</span>
+							<span class="text-xs text-gray-500">{{ formatDateShort(item.createdAt) }}</span>
 							<span
 								:class="getActionBadgeClass(item.action)"
 								class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium text-white"
@@ -62,18 +62,9 @@
 
 <script setup lang="ts">
 import BaseCard from '@/components/base/BaseCard.vue';
-
-interface DocumentHistoryDto {
-	id: number;
-	userId: number;
-	userName: string;
-	action: string;
-	fieldName?: string | null;
-	oldValue?: string | null;
-	newValue?: string | null;
-	comment?: string | null;
-	createdAt: string;
-}
+import { formatDateShort } from '@/utils/date.utils';
+import type { DocumentHistoryDto } from '@/types/document.types';
+import { getActionLabel, getActionIcon, getActionBadgeClass } from '@/types/document.types';
 
 interface Props {
 	history: DocumentHistoryDto[];
@@ -83,64 +74,5 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
 	loading: false,
 });
-
-function formatDate(dateString: string): string {
-	const date = new Date(dateString);
-	return date.toLocaleString('hu-HU', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	});
-}
-
-function getActionLabel(action: string): string {
-	const labels: Record<string, string> = {
-		'Created': 'Létrehozva',
-		'Updated': 'Módosítva',
-		'StatusChanged': 'Státusz változás',
-		'CommentAdded': 'Megjegyzés hozzáadva',
-		'Forwarded': 'Továbbküldve',
-		'Returned': 'Visszaküldve',
-		'Rejected': 'Elutasítva',
-		'Finalized': 'Lezárva',
-		'Assigned': 'Hozzárendelve',
-		'Delegated': 'Átadva',
-	};
-	return labels[action] || action;
-}
-
-function getActionIcon(action: string): [string, string] {
-	const icons: Record<string, [string, string]> = {
-		'Created': ['fas', 'plus'],
-		'Updated': ['fas', 'edit'],
-		'StatusChanged': ['fas', 'arrows-rotate'],
-		'CommentAdded': ['fas', 'comment'],
-		'Forwarded': ['fas', 'arrow-right'],
-		'Returned': ['fas', 'arrow-left'],
-		'Rejected': ['fas', 'times-circle'],
-		'Finalized': ['fas', 'check-circle'],
-		'Assigned': ['fas', 'user'],
-		'Delegated': ['fas', 'user-plus'],
-	};
-	return icons[action] || ['fas', 'circle'];
-}
-
-function getActionBadgeClass(action: string): string {
-	const classes: Record<string, string> = {
-		'Created': 'bg-blue-500',
-		'Updated': 'bg-yellow-500',
-		'StatusChanged': 'bg-purple-500',
-		'CommentAdded': 'bg-gray-500',
-		'Forwarded': 'bg-green-500',
-		'Returned': 'bg-orange-500',
-		'Rejected': 'bg-red-500',
-		'Finalized': 'bg-emerald-500',
-		'Assigned': 'bg-indigo-500',
-		'Delegated': 'bg-pink-500',
-	};
-	return classes[action] || 'bg-gray-500';
-}
 </script>
 

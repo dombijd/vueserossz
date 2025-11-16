@@ -45,8 +45,8 @@
 				<div class="flex-1 min-w-0">
 					<div class="flex items-center gap-2 mb-1">
 						<span class="font-medium text-gray-900">{{ comment.userName }}</span>
-						<span class="text-xs text-gray-500" :title="formatAbsoluteDate(comment.createdAt)">
-							{{ formatRelativeDate(comment.createdAt) }}
+						<span class="text-xs text-gray-500" :title="formatDateTime(comment.createdAt)">
+							{{ formatRelativeTime(comment.createdAt) }}
 						</span>
 					</div>
 					<p class="text-gray-700 whitespace-pre-wrap">{{ comment.text }}</p>
@@ -62,19 +62,13 @@ import { useToast } from '@/composables/useToast';
 import BaseCard from '@/components/base/BaseCard.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
 import api from '@/services/api';
+import { formatRelativeTime, formatDateTime } from '@/utils/date.utils';
 
-interface Comment {
-	id: number;
-	documentId: number;
-	userId: number;
-	userName: string;
-	text: string;
-	createdAt: string;
-}
+import type { DocumentCommentDto } from '@/types/document.types';
 
 interface Props {
 	documentId: number;
-	comments: Comment[];
+	comments: DocumentCommentDto[];
 }
 
 const props = defineProps<Props>();
@@ -95,37 +89,6 @@ function getUserInitials(name: string): string {
 		return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 	}
 	return name.substring(0, 2).toUpperCase();
-}
-
-function formatRelativeDate(dateString: string): string {
-	const date = new Date(dateString);
-	const now = new Date();
-	const diffMs = now.getTime() - date.getTime();
-	const diffMins = Math.floor(diffMs / 60000);
-	const diffHours = Math.floor(diffMs / 3600000);
-	const diffDays = Math.floor(diffMs / 86400000);
-	
-	if (diffMins < 1) return 'épp most';
-	if (diffMins < 60) return `${diffMins} perce`;
-	if (diffHours < 24) return `${diffHours} órája`;
-	if (diffDays < 7) return `${diffDays} napja`;
-	
-	return date.toLocaleDateString('hu-HU', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
-}
-
-function formatAbsoluteDate(dateString: string): string {
-	const date = new Date(dateString);
-	return date.toLocaleString('hu-HU', {
-		year: 'numeric',
-		month: 'long',
-		day: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-	});
 }
 
 async function submitComment() {

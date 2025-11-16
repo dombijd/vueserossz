@@ -48,7 +48,7 @@
 					<!-- Létrehozva -->
 					<template #cell-createdAt="{ row }">
 						<span class="text-sm text-gray-600">
-							{{ formatDate(row.createdAt) }}
+							{{ formatDateTime(row.createdAt) }}
 						</span>
 					</template>
 
@@ -165,6 +165,8 @@ import BaseButton from '../base/BaseButton.vue';
 import StatusBadge from '../base/StatusBadge.vue';
 import { useDocumentStore } from '../../stores/documentStore';
 import type { DocumentResponseDto, PaginatedResult } from '../../types/document.types';
+import { formatDateTime } from '@/utils/date.utils';
+import { usePagination } from '@/composables/usePagination';
 
 const router = useRouter();
 const documentStore = useDocumentStore();
@@ -189,49 +191,8 @@ const columns: TableColumn[] = [
 	{ key: 'actions', label: 'Műveletek' }
 ];
 
-// Computed for pagination page numbers
-const visiblePages = computed(() => {
-	if (!pagination.value) return [];
-	
-	const total = pagination.value.totalPages;
-	const current = pagination.value.page;
-	const pages: (number | string)[] = [];
-	
-	if (total <= 7) {
-		// Show all pages if 7 or fewer
-		for (let i = 1; i <= total; i++) {
-			pages.push(i);
-		}
-	} else {
-		// Always show first page
-		pages.push(1);
-		
-		if (current <= 4) {
-			// Near the start
-			for (let i = 2; i <= 5; i++) {
-				pages.push(i);
-			}
-			pages.push('...');
-			pages.push(total);
-		} else if (current >= total - 3) {
-			// Near the end
-			pages.push('...');
-			for (let i = total - 4; i <= total; i++) {
-				pages.push(i);
-			}
-		} else {
-			// In the middle
-			pages.push('...');
-			for (let i = current - 1; i <= current + 1; i++) {
-				pages.push(i);
-			}
-			pages.push('...');
-			pages.push(total);
-		}
-	}
-	
-	return pages;
-});
+// Pagination composable
+const { visiblePages } = usePagination(pagination);
 
 // Methods
 async function loadDocuments() {
@@ -263,18 +224,6 @@ function handleSelect(selectedRows: DocumentResponseDto[]) {
 
 function handleOpen(documentId: number) {
 	router.push(`/documents/${documentId}`);
-}
-
-function formatDate(dateString: string): string {
-	if (!dateString) return '-';
-	const date = new Date(dateString);
-	return date.toLocaleDateString('hu-HU', {
-		year: 'numeric',
-		month: '2-digit',
-		day: '2-digit',
-		hour: '2-digit',
-		minute: '2-digit'
-	});
 }
 
 // Lifecycle

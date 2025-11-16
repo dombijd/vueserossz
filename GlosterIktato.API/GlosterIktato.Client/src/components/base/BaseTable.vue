@@ -31,7 +31,7 @@
 						<div class="flex items-center gap-2">
 							<span>{{ column.label }}</span>
 							<span v-if="column.sortable" class="flex flex-col">
-								<FontAwesomeIcon
+								<font-awesome-icon
 									:icon="['fas', 'chevron-up']"
 									:class="[
 										'h-3 w-3 transition-opacity',
@@ -40,7 +40,7 @@
 											: 'text-gray-400 opacity-50'
 									]"
 								/>
-								<FontAwesomeIcon
+								<font-awesome-icon
 									:icon="['fas', 'chevron-down']"
 									:class="[
 										'h-3 w-3 transition-opacity -mt-1',
@@ -111,7 +111,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 /**
  * Table column definition

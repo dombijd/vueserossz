@@ -17,7 +17,7 @@
 						:class="linkClass(isActive(item))"
 						:aria-label="collapsed ? item.label : undefined"
 					>
-						<FontAwesomeIcon v-if="item.icon" :icon="item.icon" class="h-5 w-5 shrink-0" />
+						<font-awesome-icon v-if="item.icon" :icon="item.icon" class="h-5 w-5 shrink-0" />
 						<span v-if="!collapsed" class="truncate">{{ item.label }}</span>
 					</router-link>
 
@@ -30,9 +30,9 @@
 							:aria-label="collapsed ? item.label : undefined"
 							:aria-expanded="openedGroups.has(idx) ? 'true' : 'false'"
 						>
-							<FontAwesomeIcon v-if="item.icon" :icon="item.icon" class="h-5 w-5 shrink-0" />
+							<font-awesome-icon v-if="item.icon" :icon="item.icon" class="h-5 w-5 shrink-0" />
 							<span v-if="!collapsed" class="truncate flex-1 text-left">{{ item.label }}</span>
-							<FontAwesomeIcon
+							<font-awesome-icon
 								v-if="!collapsed"
 								:icon="['fas', 'chevron-right']"
 								:class="[
@@ -55,7 +55,7 @@
 										:to="child.to || '#'"
 										:class="childLinkClass(isActive(child))"
 									>
-										<FontAwesomeIcon v-if="child.icon" :icon="child.icon" class="h-4 w-4 shrink-0" />
+										<font-awesome-icon v-if="child.icon" :icon="child.icon" class="h-4 w-4 shrink-0" />
 										<span class="truncate">{{ child.label }}</span>
 									</router-link>
 								</li>
@@ -74,7 +74,7 @@
 				class="w-full flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
 				:aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
 			>
-				<FontAwesomeIcon :icon="['fas', 'bars']" class="h-5 w-5 shrink-0" />
+				<font-awesome-icon :icon="['fas', 'bars']" class="h-5 w-5 shrink-0" />
 				<span v-if="!collapsed" class="truncate">Collapse</span>
 			</button>
 		</div>
@@ -84,8 +84,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
-import type { IconDefinition, IconProp } from '@fortawesome/fontawesome-svg-core';
+import type { IconDefinition, IconProp } from '@/types/fontawesome.types';
 
 /**
  * Navigation item interface

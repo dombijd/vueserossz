@@ -24,7 +24,7 @@
 				:aria-label="`File input${multiple ? ' (multiple allowed)' : ''}`"
 			/>
 			<div class="text-center">
-				<FontAwesomeIcon :icon="['fas', 'upload']" class="h-8 w-8 text-gray-400 mb-2" />
+				<font-awesome-icon :icon="['fas', 'upload']" class="h-8 w-8 text-gray-400 mb-2" />
 				<p class="text-sm text-gray-600">
 					<span class="font-medium text-blue-600">Click to upload</span>
 					or drag and drop
@@ -70,7 +70,7 @@
 					class="shrink-0 p-1 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
 					:aria-label="`Remove ${file.name}`"
 				>
-					<FontAwesomeIcon :icon="['fas', 'times']" class="h-4 w-4" />
+					<font-awesome-icon :icon="['fas', 'times']" class="h-4 w-4" />
 				</button>
 			</div>
 		</div>
@@ -79,7 +79,6 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 
 /**
  * File with upload metadata

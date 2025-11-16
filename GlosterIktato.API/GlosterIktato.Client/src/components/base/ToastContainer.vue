@@ -20,7 +20,7 @@
 				class="pointer-events-auto min-w-[300px] max-w-md shadow-lg rounded-lg p-4 flex items-start gap-3"
 				role="alert"
 			>
-				<FontAwesomeIcon
+				<font-awesome-icon
 					:icon="toastIcon(toast.type)"
 					:class="iconClass(toast.type)"
 					class="shrink-0 mt-0.5"
@@ -34,7 +34,7 @@
 					class="shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
 					aria-label="Close notification"
 				>
-					<FontAwesomeIcon :icon="['fas', 'times']" class="h-4 w-4" />
+					<font-awesome-icon :icon="['fas', 'times']" class="h-4 w-4" />
 				</button>
 			</div>
 		</TransitionGroup>
@@ -43,7 +43,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 import { useToast, type ToastType } from '@/composables/useToast';
 
 const { toasts, remove } = useToast();

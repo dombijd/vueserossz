@@ -33,7 +33,7 @@
 						{{ relation.relatedDocumentSupplierName }}
 					</p>
 					<p class="text-xs text-gray-500 mt-1">
-						Létrehozva: {{ formatDate(relation.createdAt) }}
+						Létrehozva: {{ formatDateShort(relation.createdAt) }}
 					</p>
 				</div>
 				<div class="flex gap-2">
@@ -68,6 +68,8 @@ import { useToast } from '@/composables/useToast';
 import BaseCard from '@/components/base/BaseCard.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
 import api from '@/services/api';
+import { formatDateShort } from '@/utils/date.utils';
+import { getDocumentTypeBadgeClass } from '@/types/document.types';
 
 interface DocumentRelation {
 	id: number;
@@ -117,24 +119,6 @@ function getRelatedArchiveNumber(relation: DocumentRelation): string {
 	return relation.documentId === props.documentId
 		? relation.relatedDocumentArchiveNumber
 		: relation.documentArchiveNumber;
-}
-
-function formatDate(dateString: string): string {
-	const date = new Date(dateString);
-	return date.toLocaleDateString('hu-HU', {
-		year: 'numeric',
-		month: 'short',
-		day: 'numeric',
-	});
-}
-
-function getDocumentTypeBadgeClass(code: string): string {
-	switch (code) {
-		case 'SZLA': return 'bg-blue-100 text-blue-800';
-		case 'TIG': return 'bg-green-100 text-green-800';
-		case 'SZ': return 'bg-purple-100 text-purple-800';
-		default: return 'bg-gray-100 text-gray-800';
-	}
 }
 
 function previewDocument(documentId: number) {
