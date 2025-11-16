@@ -3,6 +3,7 @@ import LoginPage from '@/components/features/LoginPage.vue';
 import LandingPage from '@/components/features/LandingPage.vue';
 import DocumentUploadPage from '@/components/features/DocumentUploadPage.vue';
 import DocumentsListPage from '@/components/features/DocumentsListPage.vue';
+import DocumentDetailPage from '@/components/features/DocumentDetailPage.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
@@ -40,8 +41,8 @@ const router = createRouter({
 		{
 			path: '/documents/:id',
 			name: 'document-detail',
-			component: LandingPage, // TODO: Replace with DocumentDetailPage
-			meta: { requiresAuth: true }
+			component: DocumentDetailPage,
+			meta: { requiresAuth: true, title: 'Dokumentum karton' }
 		},
 		// Settings
 		{

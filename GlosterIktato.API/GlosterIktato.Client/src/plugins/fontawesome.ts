@@ -44,6 +44,15 @@ import {
   faArrowRotateRight,
   faGauge,
   faGear,
+  faCopy,
+  faUserPlus,
+  faMinus,
+  faExpand,
+  faArrowRight,
+  faExclamationTriangle,
+  faComment,
+  faArrowsRotate,
+  faArchive,
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -90,6 +99,15 @@ library.add(
   faArrowRotateRight,
   faGauge,
   faGear,
+  faCopy,
+  faUserPlus,
+  faMinus,
+  faExpand,
+  faArrowRight,
+  faExclamationTriangle,
+  faComment,
+  faArrowsRotate,
+  faArchive,
 )
 
 export { FontAwesomeIcon }
