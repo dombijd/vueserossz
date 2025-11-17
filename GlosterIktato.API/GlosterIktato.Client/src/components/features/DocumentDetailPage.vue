@@ -121,7 +121,31 @@
 							<template v-if="document.documentTypeCode === 'SZLA'">
 								<!-- Invoice specific fields -->
 								<div class="border-t border-gray-200 pt-4 mt-4">
-									<h3 class="text-sm font-semibold text-gray-900 mb-4">Számla adatok</h3>
+									<div class="flex items-center justify-between mb-4">
+										<h3 class="text-sm font-semibold text-gray-900">Számla adatok</h3>
+										<BaseButton
+											v-if="canSubmitToDataxo"
+											variant="primary"
+											size="sm"
+											@click="submitToDataxo"
+											:loading="submittingToDataxo"
+											:left-icon="['fas', 'upload']"
+										>
+											Küldés Dataxo-ba
+										</BaseButton>
+										<div v-else-if="document.dataxoStatus === 'Processing'" class="flex items-center gap-2 text-sm text-blue-600">
+											<font-awesome-icon icon="spinner" class="animate-spin" />
+											<span>Feldolgozás folyamatban...</span>
+										</div>
+										<div v-else-if="document.dataxoStatus === 'Success'" class="flex items-center gap-2 text-sm text-green-600">
+											<font-awesome-icon icon="check-circle" />
+											<span>Feldolgozva</span>
+										</div>
+										<div v-else-if="document.dataxoStatus === 'Failed'" class="flex items-center gap-2 text-sm text-red-600">
+											<font-awesome-icon icon="exclamation-circle" />
+											<span>Feldolgozás sikertelen</span>
+										</div>
+									</div>
 
 									<div>
 										<label class="block text-sm font-medium text-gray-700 mb-1">
@@ -700,6 +724,7 @@ const showRejectModal = ref(false);
 const showDelegateModal = ref(false);
 const showRelatedDocumentModal = ref(false);
 const showFullscreenPdf = ref(false);
+const submittingToDataxo = ref(false);
 
 // Form data
 const formData = ref({
@@ -773,6 +798,19 @@ const canEdit = computed(() => {
 	}
 	
 	return false;
+});
+
+const canSubmitToDataxo = computed(() => {
+	if (!document.value) return false;
+	// Csak számla típusú dokumentumoknál
+	if (document.value.documentTypeCode !== 'SZLA') return false;
+	// Csak Draft státuszban lehet küldeni
+	if (document.value.status !== 'Draft') return false;
+	// Ha már folyamatban van, nem lehet újra küldeni
+	if (document.value.dataxoStatus === 'Processing') return false;
+	// Ha már sikeresen feldolgozva, nem kell újra küldeni
+	if (document.value.dataxoStatus === 'Success') return false;
+	return true;
 });
 
 // Helper function to check if user can perform workflow action
@@ -1129,6 +1167,26 @@ async function saveDocument() {
 		toastError(err.response?.data?.message || 'Hiba történt a mentés során');
 	} finally {
 		saving.value = false;
+	}
+}
+
+async function submitToDataxo() {
+	if (!document.value) return;
+	
+	submittingToDataxo.value = true;
+	try {
+		const response = await api.post(`/documents/${documentId.value}/submit-to-dataxo`);
+		
+		// Frissítjük a dokumentumot a válasz alapján
+		await loadDocument();
+		
+		success('Számla sikeresen elküldve Dataxo-ba feldolgozásra');
+	} catch (err: any) {
+		console.error('Error submitting to Dataxo:', err);
+		const errorMessage = err.response?.data?.message || 'Hiba történt a Dataxo-ba küldés során';
+		toastError(errorMessage);
+	} finally {
+		submittingToDataxo.value = false;
 	}
 }
 

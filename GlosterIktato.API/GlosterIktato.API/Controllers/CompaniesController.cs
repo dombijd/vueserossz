@@ -48,6 +48,31 @@ namespace GlosterIktato.API.Controllers
         }
 
         /// <summary>
+        /// Összes cég lekérdezése, amelyhez a bejelentkezett felhasználó kapcsolódik
+        /// GET /api/companies/my-companies
+        /// </summary>
+        [HttpGet("my-companies")]
+        [ProducesResponseType(typeof(List<CompanyDto>), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+        public async Task<IActionResult> GetMyCompanies()
+        {
+            try
+            {
+                var currentUserId = GetCurrentUserId();
+                if (currentUserId == 0)
+                    return Unauthorized("User not authenticated");
+
+                var companies = await _companyService.GetCompaniesByUserIdAsync(currentUserId);
+                return Ok(companies);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving companies for current user");
+                return StatusCode(500, "An error occurred while retrieving companies");
+            }
+        }
+
+        /// <summary>
         /// Cég lekérdezése ID alapján
         /// </summary>
         [HttpGet("{id}")]

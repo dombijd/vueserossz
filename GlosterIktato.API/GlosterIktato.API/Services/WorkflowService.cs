@@ -99,6 +99,24 @@ namespace GlosterIktato.API.Services
                     };
                 }
 
+                // Számla összeghatár ellenőrzés - csak akkor, ha ElevatedApproval-ból Accountant-ba akarnak lépni
+                if (oldStatus == DocumentStatuses.ElevatedApproval && 
+                    nextStatus == DocumentStatuses.Accountant && 
+                    IsInvoice(document))
+                {
+                    // Ha a bruttó összeg nincs megadva, nulla, vagy meghaladja a limitet, akkor nem lehet továbbítani
+                    if (!document.GrossAmount.HasValue || 
+                        document.GrossAmount.Value <= 0 || 
+                        document.GrossAmount.Value > _elevatedApprovalThreshold)
+                    {
+                        return new WorkflowActionResultDto
+                        {
+                            Success = false,
+                            Message = $"Az összeg nem felel meg a feltételeknek. A számla bruttó összege nem lehet nulla, és nem haladhatja meg a {_elevatedApprovalThreshold:N0} HUF értékhatárt."
+                        };
+                    }
+                }
+
                 // Státusz frissítése
                 document.Status = nextStatus;
                 document.ModifiedByUserId = currentUserId;

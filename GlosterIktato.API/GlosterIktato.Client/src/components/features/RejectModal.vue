@@ -7,7 +7,7 @@
 	>
 		<div class="space-y-4">
 			<p class="text-sm text-gray-600">
-				Kérjük, adja meg az elutasítás indoklását:
+				Kérjük, adja meg az elutasítás indoklását (minimum 10 karakter):
 			</p>
 			<textarea
 				v-model="reason"
@@ -20,7 +20,7 @@
 		</div>
 		<template #footer>
 			<BaseButton variant="secondary" @click="handleCancel">Mégse</BaseButton>
-			<BaseButton variant="danger" @click="handleConfirm" :disabled="!reason.trim()">
+			<BaseButton variant="danger" @click="handleConfirm" :disabled="!isValidReason">
 				Elutasítás
 			</BaseButton>
 		</template>
@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import BaseModal from '@/components/base/BaseModal.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
 
@@ -46,9 +46,23 @@ const emit = defineEmits<{
 const reason = ref('');
 const error = ref('');
 
+const MIN_REASON_LENGTH = 10;
+
+const isValidReason = computed(() => {
+	const trimmed = reason.value.trim();
+	return trimmed.length >= MIN_REASON_LENGTH;
+});
+
 watch(() => props.modelValue, (newValue) => {
 	if (!newValue) {
 		reason.value = '';
+		error.value = '';
+	}
+});
+
+watch(reason, () => {
+	// Töröljük a hibát, amikor a felhasználó elkezd gépelni
+	if (error.value) {
 		error.value = '';
 	}
 });
@@ -58,11 +72,19 @@ function handleCancel() {
 }
 
 function handleConfirm() {
-	if (!reason.value.trim()) {
+	const trimmed = reason.value.trim();
+	
+	if (!trimmed) {
 		error.value = 'Indoklás kötelező';
 		return;
 	}
-	emit('confirm', reason.value.trim());
+	
+	if (trimmed.length < MIN_REASON_LENGTH) {
+		error.value = `Az indoklásnak legalább ${MIN_REASON_LENGTH} karakternek kell lennie`;
+		return;
+	}
+	
+	emit('confirm', trimmed);
 	emit('update:modelValue', false);
 }
 </script>

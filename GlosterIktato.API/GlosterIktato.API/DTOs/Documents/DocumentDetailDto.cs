@@ -4,6 +4,12 @@
     {
         public string StoragePath { get; set; } = string.Empty;
         public List<DocumentHistoryDto> History { get; set; } = new();
+        
+        // Dataxo integráció mezők
+        public string? DataxoTransactionId { get; set; }
+        public string? DataxoStatus { get; set; } // null, Processing, Success, Failed
+        public DateTime? DataxoSubmittedAt { get; set; }
+        public DateTime? DataxoCompletedAt { get; set; }
     }
 
     public class DocumentHistoryDto

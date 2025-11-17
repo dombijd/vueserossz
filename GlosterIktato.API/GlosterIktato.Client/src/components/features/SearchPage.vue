@@ -117,8 +117,9 @@
 							v-model="searchForm.assignedToUserId"
 							:options="userOptions"
 							label="Hozzárendelt felhasználó"
-							placeholder="Összes felhasználó"
+							:placeholder="searchForm.companyId ? 'Összes felhasználó' : 'Először válasszon céget'"
 							:loading="loadingUsers"
+							:disabled="!searchForm.companyId"
 						/>
 					</div>
 
@@ -145,26 +146,81 @@
 
 			<!-- Search Results -->
 			<BaseCard v-if="hasSearched" title="Találati lista">
-				<!-- Bulk Actions -->
-				<div v-if="selectedDocuments.length > 0" class="mb-4 flex gap-2">
-					<BaseButton
-						variant="secondary"
-						size="sm"
-						:left-icon="['fas', 'file-excel']"
-						@click="exportToExcel"
-						:loading="exporting"
-					>
-						Excel exportálás ({{ selectedDocuments.length }})
-					</BaseButton>
-					<BaseButton
-						variant="secondary"
-						size="sm"
-						:left-icon="['fas', 'file-zipper']"
-						@click="exportToPdfZip"
-						:loading="exporting"
-					>
-						ZIP exportálás ({{ selectedDocuments.length }})
-					</BaseButton>
+				<!-- Export All Results -->
+				<div v-if="searchResults.length > 0" class="mb-4 border-b border-gray-200 pb-4">
+					<div class="flex gap-2 items-center justify-between mb-3">
+						<div class="flex gap-2">
+							<BaseButton
+								variant="primary"
+								size="sm"
+								:left-icon="['fas', 'file-excel']"
+								@click="exportAllToExcel"
+								:loading="exporting"
+							>
+								Összes találat Excel exportálása ({{ searchResults.length }})
+							</BaseButton>
+							<BaseButton
+								variant="primary"
+								size="sm"
+								:left-icon="['fas', 'file-zipper']"
+								@click="exportAllToPdfZip"
+								:loading="exporting"
+							>
+								Összes találat ZIP exportálása ({{ searchResults.length }})
+							</BaseButton>
+						</div>
+						<div v-if="searchPagination" class="text-sm text-gray-600">
+							Összesen: {{ searchPagination.totalCount }} találat
+						</div>
+					</div>
+					<!-- Include Related Documents Checkbox for ZIP -->
+					<div class="flex items-center gap-2">
+						<input
+							id="includeRelatedAll"
+							type="checkbox"
+							v-model="includeRelatedAll"
+							class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+						/>
+						<label for="includeRelatedAll" class="text-sm text-gray-700 cursor-pointer">
+							Kapcsolódó dokumentumok is exportálása (ZIP esetén)
+						</label>
+					</div>
+				</div>
+
+				<!-- Bulk Actions for Selected -->
+				<div v-if="selectedDocuments.length > 0" class="mb-4">
+					<div class="flex gap-2 mb-3">
+						<BaseButton
+							variant="secondary"
+							size="sm"
+							:left-icon="['fas', 'file-excel']"
+							@click="exportSelectedToExcel"
+							:loading="exporting"
+						>
+							Kiválasztottak Excel exportálása ({{ selectedDocuments.length }})
+						</BaseButton>
+						<BaseButton
+							variant="secondary"
+							size="sm"
+							:left-icon="['fas', 'file-zipper']"
+							@click="exportSelectedToPdfZip"
+							:loading="exporting"
+						>
+							Kiválasztottak ZIP exportálása ({{ selectedDocuments.length }})
+						</BaseButton>
+					</div>
+					<!-- Include Related Documents Checkbox for Selected ZIP -->
+					<div class="flex items-center gap-2">
+						<input
+							id="includeRelatedSelected"
+							type="checkbox"
+							v-model="includeRelatedSelected"
+							class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+						/>
+						<label for="includeRelatedSelected" class="text-sm text-gray-700 cursor-pointer">
+							Kapcsolódó dokumentumok is exportálása (ZIP esetén)
+						</label>
+					</div>
 				</div>
 
 				<!-- Results Table -->
@@ -220,7 +276,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import AppLayout from '../layout/AppLayout.vue';
 import BaseCard from '../base/BaseCard.vue';
@@ -231,9 +287,12 @@ import BaseSelect from '../base/BaseSelect.vue';
 import DateRangePicker from '../base/DateRangePicker.vue';
 import StatusBadge from '../base/StatusBadge.vue';
 import { useToast } from '@/composables/useToast';
-import api from '@/services/api';
+import { exportToExcel, exportToPdfZip } from '@/services/exportService';
+import { getMyCompanies, getDocumentTypes, getUsersByCompany } from '@/services/dataService';
+import { searchDocuments, type DocumentSearchParams } from '@/services/searchService';
 import type { DocumentResponseDto, PaginatedResult } from '@/types/document.types';
 import { formatDateTime } from '@/utils/date.utils';
+import { formatCurrency } from '@/utils/currency.utils';
 import { CURRENCY_OPTIONS } from '@/constants/app.constants';
 
 const router = useRouter();
@@ -267,12 +326,15 @@ const isSearching = ref(false);
 const hasSearched = ref(false);
 const exporting = ref(false);
 const loadingUsers = ref(false);
+const includeRelatedAll = ref(false);
+const includeRelatedSelected = ref(false);
 
 // Options (load from API)
 const companyOptions = ref<Array<{ label: string; value: number }>>([]);
 const documentTypeOptions = ref<Array<{ label: string; value: number }>>([]);
 const userOptions = ref<Array<{ label: string; value: number }>>([]);
 
+// Státuszok (konstansok, nem adatbázisból)
 const statusOptions = [
 	{ label: 'Vázlat', value: 'Draft' },
 	{ label: 'Jóváhagyásra vár', value: 'PendingApproval' },
@@ -300,14 +362,15 @@ async function performSearch() {
 	hasSearched.value = true;
 
 	try {
-		const params = buildSearchParams();
-		const response = await api.get<PaginatedResult<DocumentResponseDto>>(
-			'/documents/search',
-			{ params }
-		);
+		const searchParams: DocumentSearchParams = {
+			...searchForm.value,
+			page: 1,
+			pageSize: 20
+		};
 
-		searchResults.value = response.data.data || [];
-		searchPagination.value = response.data;
+		const result = await searchDocuments(searchParams);
+		searchResults.value = result.data || [];
+		searchPagination.value = result;
 	} catch (err) {
 		toastError('Hiba történt a keresés során');
 		console.error('Search error:', err);
@@ -315,18 +378,6 @@ async function performSearch() {
 	} finally {
 		isSearching.value = false;
 	}
-}
-
-function buildSearchParams() {
-	const params: any = { page: 1, pageSize: 20 };
-
-	Object.entries(searchForm.value).forEach(([key, value]) => {
-		if (value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)) {
-			params[key] = value;
-		}
-	});
-
-	return params;
 }
 
 function resetForm() {
@@ -362,37 +413,33 @@ function openDocument(documentId: number) {
 	router.push(`/documents/${documentId}`);
 }
 
-function formatCurrency(amount: number, currency: string = 'HUF'): string {
-	return new Intl.NumberFormat('hu-HU', {
-		style: 'currency',
-		currency: currency,
-	}).format(amount);
-}
-
-async function exportToExcel() {
-	if (selectedDocuments.value.length === 0) return;
+async function exportAllToExcel() {
+	if (searchResults.value.length === 0) return;
 
 	exporting.value = true;
 	try {
-		const documentIds = selectedDocuments.value.map(d => d.id);
-		const response = await api.post(
-			'/documents/export/excel',
-			{ documentIds },
-			{ responseType: 'blob' }
-		);
+		const documentIds = searchResults.value.map(d => d.id);
+		await exportToExcel({ documentIds });
+		success(`Excel fájl sikeresen exportálva (${searchResults.value.length} dokumentum)`);
+	} catch (err) {
+		toastError('Hiba történt az exportálás során');
+		console.error('Export error:', err);
+	} finally {
+		exporting.value = false;
+	}
+}
 
-		// Download file
-		const blob = new Blob([response.data], {
-			type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+async function exportAllToPdfZip() {
+	if (searchResults.value.length === 0) return;
+
+	exporting.value = true;
+	try {
+		const documentIds = searchResults.value.map(d => d.id);
+		await exportToPdfZip({
+			documentIds,
+			includeRelated: includeRelatedAll.value
 		});
-		const url = window.URL.createObjectURL(blob);
-		const link = document.createElement('a');
-		link.href = url;
-		link.download = `documents_${new Date().toISOString().split('T')[0]}.xlsx`;
-		link.click();
-		window.URL.revokeObjectURL(url);
-
-		success('Excel fájl sikeresen exportálva');
+		success(`ZIP fájl sikeresen exportálva (${searchResults.value.length} dokumentum)`);
 	} catch (err) {
 		toastError('Hiba történt az exportálás során');
 		console.error('Export error:', err);
@@ -401,28 +448,14 @@ async function exportToExcel() {
 	}
 }
 
-async function exportToPdfZip() {
+async function exportSelectedToExcel() {
 	if (selectedDocuments.value.length === 0) return;
 
 	exporting.value = true;
 	try {
 		const documentIds = selectedDocuments.value.map(d => d.id);
-		const response = await api.post(
-			'/documents/export/pdf-zip',
-			{ documentIds },
-			{ responseType: 'blob' }
-		);
-
-		// Download file
-		const blob = new Blob([response.data], { type: 'application/zip' });
-		const url = window.URL.createObjectURL(blob);
-		const link = document.createElement('a');
-		link.href = url;
-		link.download = `documents_${new Date().toISOString().split('T')[0]}.zip`;
-		link.click();
-		window.URL.revokeObjectURL(url);
-
-		success('ZIP fájl sikeresen exportálva');
+		await exportToExcel({ documentIds });
+		success(`Excel fájl sikeresen exportálva (${selectedDocuments.value.length} dokumentum)`);
 	} catch (err) {
 		toastError('Hiba történt az exportálás során');
 		console.error('Export error:', err);
@@ -430,10 +463,93 @@ async function exportToPdfZip() {
 		exporting.value = false;
 	}
 }
+
+async function exportSelectedToPdfZip() {
+	if (selectedDocuments.value.length === 0) return;
+
+	exporting.value = true;
+	try {
+		const documentIds = selectedDocuments.value.map(d => d.id);
+		await exportToPdfZip({
+			documentIds,
+			includeRelated: includeRelatedSelected.value
+		});
+		success(`ZIP fájl sikeresen exportálva (${selectedDocuments.value.length} dokumentum)`);
+	} catch (err) {
+		toastError('Hiba történt az exportálás során');
+		console.error('Export error:', err);
+	} finally {
+		exporting.value = false;
+	}
+}
+
+// Load data functions (component-specific logic only)
+async function loadCompanies() {
+	try {
+		const companies = await getMyCompanies();
+		companyOptions.value = companies.map(c => ({
+			label: c.name,
+			value: c.id
+		}));
+		
+		// Ha csak egy cég van, automatikusan kiválasztjuk (UI logic)
+		if (companyOptions.value.length === 1) {
+			searchForm.value.companyId = companyOptions.value[0].value;
+		}
+	} catch (err) {
+		console.error('Error loading companies:', err);
+		toastError('Nem sikerült betölteni a cégeket');
+	}
+}
+
+async function loadDocumentTypes() {
+	try {
+		const documentTypes = await getDocumentTypes();
+		documentTypeOptions.value = documentTypes.map(dt => ({
+			label: dt.name,
+			value: dt.id
+		}));
+	} catch (err) {
+		console.error('Error loading document types:', err);
+		toastError('Nem sikerült betölteni a dokumentum típusokat');
+	}
+}
+
+async function loadUsers(companyId: number) {
+	if (!companyId) {
+		userOptions.value = [];
+		return;
+	}
+
+	loadingUsers.value = true;
+	try {
+		const users = await getUsersByCompany(companyId);
+		userOptions.value = users.map(u => ({
+			label: `${u.firstName} ${u.lastName} (${u.email})`,
+			value: u.id
+		}));
+	} catch (err) {
+		console.error('Error loading users:', err);
+		toastError('Nem sikerült betölteni a felhasználókat');
+	} finally {
+		loadingUsers.value = false;
+	}
+}
+
+// Watch company selection to load users
+watch(() => searchForm.value.companyId, (newCompanyId) => {
+	if (newCompanyId) {
+		loadUsers(newCompanyId);
+	} else {
+		userOptions.value = [];
+	}
+});
 
 // Load options on mount
 onMounted(async () => {
-	// TODO: Load companies, document types, users from API
-	// For now, leaving empty arrays
+	await Promise.all([
+		loadCompanies(),
+		loadDocumentTypes()
+	]);
 });
 </script>

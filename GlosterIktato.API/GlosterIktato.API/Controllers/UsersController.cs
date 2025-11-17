@@ -1,5 +1,6 @@
 ﻿// Controllers/UsersController.cs
 using GlosterIktato.API.DTOs.Auth;
+using GlosterIktato.API.DTOs.User;
 using GlosterIktato.API.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -151,13 +152,5 @@ namespace GlosterIktato.API.Controllers
                 return StatusCode(500, "An error occurred while deactivating the user");
             }
         }
-    }
-
-    // Simple DTO a request body-hoz
-    public class UpdateUserRequest
-    {
-        public string? FirstName { get; set; }
-        public string? LastName { get; set; }
-        public string? Email { get; set; }
     }
 }

@@ -682,6 +682,10 @@ namespace GlosterIktato.API.Services
                 AssignedToName = d.AssignedTo != null ? $"{d.AssignedTo.FirstName} {d.AssignedTo.LastName}" : null,
                 CreatedAt = d.CreatedAt,
                 ModifiedAt = d.ModifiedAt,
+                DataxoTransactionId = d.DataxoTransactionId,
+                DataxoStatus = d.DataxoStatus,
+                DataxoSubmittedAt = d.DataxoSubmittedAt,
+                DataxoCompletedAt = d.DataxoCompletedAt,
                 History = d.History.OrderBy(h => h.CreatedAt).Select(h => new DocumentHistoryDto
                 {
                     Id = h.Id,
