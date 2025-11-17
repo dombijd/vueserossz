@@ -177,7 +177,7 @@ import { usePagination } from '@/composables/usePagination';
 import api from '@/services/api';
 
 const router = useRouter();
-const documentStore = useDocumentStore();
+const documentStore = useDocumentStore(); // Still needed for isLoading
 
 // State
 const documents = ref<DocumentResponseDto[]>([]);
@@ -192,7 +192,7 @@ const statusTabs: Tab[] = [
 	{ value: 'all', label: 'Összes', icon: ['fas', 'list'] },
 	{ value: 'Draft', label: 'Vázlat', icon: ['fas', 'file'] },
 	{ value: 'PendingApproval', label: 'Jóváhagyásra vár', icon: ['fas', 'clock'] },
-	{ value: 'Done', label: 'Kész', icon: ['fas', 'check-circle'] },
+	// { value: 'Done', label: 'Kész', icon: ['fas', 'check-circle'] },
 ];
 
 // Computed
@@ -214,24 +214,24 @@ const { visiblePages } = usePagination(pagination);
 // Methods
 async function loadDocuments() {
 	try {
-		let result;
-		if (statusFilter.value === 'all') {
-			result = await documentStore.fetchMyTasks(currentPage.value, pageSize.value);
-		} else {
-			// Call with status parameter
-			const response = await api.get<PaginatedResult<DocumentResponseDto>>(
-				'/documents/my-tasks',
-				{
-					params: {
-						page: currentPage.value,
-						pageSize: pageSize.value,
-						status: statusFilter.value
-					}
-				}
-			);
-			result = response.data;
+		// Build params object
+		const params: Record<string, any> = {
+			page: currentPage.value,
+			pageSize: pageSize.value
+		};
+		
+		// Only add status parameter if not 'all'
+		if (statusFilter.value !== 'all') {
+			params.status = statusFilter.value;
 		}
-
+		
+		// Always call API directly with consistent parameters
+		const response = await api.get<PaginatedResult<DocumentResponseDto>>(
+			'/documents/my-tasks',
+			{ params }
+		);
+		
+		const result = response.data;
 		documents.value = result?.data || [];
 		pagination.value = result;
 	} catch (error) {

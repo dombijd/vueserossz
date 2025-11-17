@@ -340,8 +340,8 @@ const statusOptions = [
 	{ label: 'Jóváhagyásra vár', value: 'PendingApproval' },
 	{ label: 'Emelt szintű jóváhagyás', value: 'ElevatedApproval' },
 	{ label: 'Könyvelőnél', value: 'Accountant' },
-	{ label: 'Kész', value: 'Done' },
-	{ label: 'Elutasítva', value: 'Rejected' },
+	// { label: 'Kész', value: 'Done' },
+	// { label: 'Elutasítva', value: 'Rejected' },
 ];
 
 // Table columns

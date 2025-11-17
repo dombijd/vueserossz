@@ -84,6 +84,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useAuthStore } from '@/stores/authStore';
 import type { IconDefinition, IconProp } from '@/types/fontawesome.types';
 
 /**
@@ -116,10 +117,57 @@ const emit = defineEmits<{
 
 const router = useRouter();
 const route = useRoute();
+const auth = useAuthStore();
 const openedGroups = ref<Set<number>>(new Set());
 
+// Route permissions mapping
+const routePermissions: Record<string, { requiresAdmin?: boolean }> = {
+	'/admin/users': { requiresAdmin: true },
+	'/admin/companies': { requiresAdmin: true },
+	'/admin/user-groups': { requiresAdmin: true },
+	// '/admin/workflow': { requiresAdmin: true }, // Commented out
+	'/suppliers': {} // No admin required
+};
+
+// Check if a route is accessible
+function isRouteAccessible(path?: string): boolean {
+	if (!path) return false;
+	const permission = routePermissions[path];
+	if (!permission) return true; // Default: accessible if not in mapping
+	
+	if (permission.requiresAdmin) {
+		return auth.isAdmin;
+	}
+	return true;
+}
+
+// Filter navigation items based on permissions
+function filterNavItems(items: SideNavItem[]): SideNavItem[] {
+	return items
+		.map(item => {
+			// If item has children, filter them first
+			if (item.children && item.children.length > 0) {
+				const filteredChildren = item.children.filter(child => isRouteAccessible(child.to));
+				// Only include parent if it has at least one accessible child
+				if (filteredChildren.length === 0) {
+					return null;
+				}
+				return {
+					...item,
+					children: filteredChildren
+				};
+			}
+			// For leaf items, check if route is accessible
+			if (!isRouteAccessible(item.to)) {
+				return null;
+			}
+			return item;
+		})
+		.filter((item): item is SideNavItem => item !== null);
+}
+
 // Default navigation items
-const navItems = computed<SideNavItem[]>(() => [
+const allNavItems: SideNavItem[] = [
 	{
 		label: 'Dashboard',
 		to: '/dashboard',
@@ -137,32 +185,40 @@ const navItems = computed<SideNavItem[]>(() => [
 		icon: ['fas', 'plus']
 	},
 	{
-		label: 'Adminisztráció',
-		icon: ['fas', 'cog'],
-		children: [
-			{
-				label: 'Felhasználók',
-				to: '/admin/users',
-				icon: ['fas', 'users']
-			},
-			{
-				label: 'Cégek',
-				to: '/admin/companies',
-				icon: ['fas', 'building']
-			},
-			{
-				label: 'Szállítók',
-				to: '/admin/suppliers',
-				icon: ['fas', 'truck']
-			},
-			{
-				label: 'Workflow',
-				to: '/admin/workflow',
-				icon: ['fas', 'cog']
-			}
-		]
-	}
-]);
+		label: 'Keresés',
+		to: '/search',
+		icon: ['fas', 'search']
+	},
+		{
+			label: 'Adminisztráció',
+			icon: ['fas', 'cog'],
+			children: [
+				{
+					label: 'Felhasználók',
+					to: '/admin/users',
+					icon: ['fas', 'users']
+				},
+				{
+					label: 'Cégek',
+					to: '/admin/companies',
+					icon: ['fas', 'building']
+				},
+				{
+					label: 'Szállítók',
+					to: '/suppliers',
+					icon: ['fas', 'truck']
+				}
+				// {
+				// 	label: 'Workflow',
+				// 	to: '/admin/workflow',
+				// 	icon: ['fas', 'cog']
+				// }
+			]
+		}
+];
+
+// Filtered navigation items based on permissions
+const navItems = computed<SideNavItem[]>(() => filterNavItems(allNavItems));
 
 // Auto-open parent group if child is active
 watch(
