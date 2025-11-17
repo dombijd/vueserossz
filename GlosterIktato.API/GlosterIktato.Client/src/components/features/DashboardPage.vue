@@ -14,7 +14,7 @@
 			</div>
 
 			<!-- Statisztikák -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				<!-- Stat Card 1: Vázlat -->
 				<BaseCard>
 					<div class="p-4">
@@ -46,7 +46,7 @@
 				</BaseCard>
 
 				<!-- Stat Card 3: Kész -->
-				<BaseCard>
+				<!-- <BaseCard>
 					<div class="p-4">
 						<div class="flex items-center justify-between">
 							<div>
@@ -58,7 +58,7 @@
 							</div>
 						</div>
 					</div>
-				</BaseCard>
+				</BaseCard> -->
 			</div>
 
 			<!-- Aktuális Ügyeim Widget -->
