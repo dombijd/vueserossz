@@ -11,12 +11,6 @@
 		</div>
 
 		<div class="flex items-center gap-4">
-			<!-- Notifications (placeholder) -->
-			<button class="relative bg-transparent border-none text-xl text-gray-600 cursor-pointer p-2 rounded-lg transition-colors duration-200 hover:bg-gray-50" title="Értesítések">
-				<font-awesome-icon icon="bell" />
-				<span v-if="notificationCount > 0" class="absolute top-0 right-0 bg-red-500 text-white text-[0.65rem] font-semibold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">{{ notificationCount }}</span>
-			</button>
-
 			<!-- User Menu -->
 			<div ref="userMenuRef" class="relative cursor-pointer" @click="toggleUserMenu">
 				<div class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-200 hover:bg-gray-50">
@@ -100,7 +94,7 @@ const userInitials = computed(() => {
 });
 const pageTitle = computed(() => {
 	// TODO: Get from route meta or store
-	return 'Dashboard';
+	return 'Iktató';
 });
 
 // Methods
