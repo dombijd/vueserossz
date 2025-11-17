@@ -157,6 +157,7 @@ namespace GlosterIktato.API.Controllers
                     document.BcPushedAt = DateTime.UtcNow;
                     document.BcStatus = "Success";
                     document.Status = "Done"; // Workflow befejezése
+                    document.AssignedToUserId = document.CreatedByUserId; // Visszaállítjuk a létrehozó userre
                     document.ModifiedAt = DateTime.UtcNow;
                     document.ModifiedByUserId = userId;
 

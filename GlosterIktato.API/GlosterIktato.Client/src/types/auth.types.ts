@@ -7,6 +7,7 @@ export interface CompanyDto {
   id: number;
   name: string;
   taxNumber: string;
+  isActive?: boolean;
 }
 
 export interface UserDto {

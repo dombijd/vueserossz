@@ -5,7 +5,7 @@ namespace GlosterIktato.API.Services.Interfaces
 {
     public interface ICompanyService
     {
-        Task<List<CompanyDto>> GetAllCompaniesAsync();
+        Task<List<CompanyDto>> GetAllCompaniesAsync(bool includeInactive = false);
         Task<CompanyDto?> GetCompanyByIdAsync(int id);
         Task<List<CompanyDto>> GetCompaniesByUserIdAsync(int userId);
         Task<CompanyDto> CreateCompanyAsync(CreateCompanyDto dto, int createdByUserId);

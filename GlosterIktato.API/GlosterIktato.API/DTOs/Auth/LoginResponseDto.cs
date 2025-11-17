@@ -15,6 +15,7 @@
         public string FirstName { get; set; } = string.Empty;
         public string LastName { get; set; } = string.Empty;
         public string FullName => $"{FirstName} {LastName}";
+        public bool IsActive { get; set; } = true;
 
         // ÚJ: CompanyId és CompanyName helyett Companies lista
         public List<CompanyDto> Companies { get; set; } = new();
@@ -28,5 +29,6 @@
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string TaxNumber { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
     }
 }

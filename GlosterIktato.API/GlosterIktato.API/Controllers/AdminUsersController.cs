@@ -30,6 +30,26 @@ namespace GlosterIktato.API.Controllers
         }
 
         /// <summary>
+        /// Get all users including inactive ones (admin only)
+        /// GET /api/admin/users
+        /// </summary>
+        [HttpGet]
+        [ProducesResponseType(typeof(List<DTOs.Auth.UserDto>), StatusCodes.Status200OK)]
+        public async Task<IActionResult> GetAllUsers()
+        {
+            try
+            {
+                var users = await _userService.GetAllUsersAsync();
+                return Ok(users);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error retrieving all users");
+                return StatusCode(500, new { message = "An error occurred while retrieving users" });
+            }
+        }
+
+        /// <summary>
         /// Create a new user with role and company assignments
         /// POST /api/admin/users
         /// </summary>
@@ -91,20 +111,53 @@ namespace GlosterIktato.API.Controllers
         }
 
         /// <summary>
-        /// Soft delete user (set IsActive = false)
-        /// DELETE /api/admin/users/{id}
+        /// Activate user
+        /// PATCH /api/admin/users/{id}/activate
         /// </summary>
-        [HttpDelete("{id}")]
-        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [HttpPatch("{id}/activate")]
+        [ProducesResponseType(typeof(DTOs.Auth.UserDto), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        public async Task<IActionResult> DeleteUser(int id)
+        public async Task<IActionResult> ActivateUser(int id)
         {
             try
             {
                 var currentUserId = GetCurrentUserId();
 
-                // Prevent self-deletion
+                var result = await _userService.ActivateUserAsync(id, currentUserId);
+
+                if (!result)
+                    return NotFound(new { message = $"User with ID {id} not found" });
+
+                // Return the updated user
+                var updatedUser = await _userService.GetUserByIdAsync(id);
+                if (updatedUser == null)
+                    return NotFound(new { message = $"User with ID {id} not found" });
+
+                return Ok(updatedUser);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error activating user {UserId}", id);
+                return StatusCode(500, new { message = "An error occurred while activating the user" });
+            }
+        }
+
+        /// <summary>
+        /// Deactivate user
+        /// PATCH /api/admin/users/{id}/deactivate
+        /// </summary>
+        [HttpPatch("{id}/deactivate")]
+        [ProducesResponseType(typeof(DTOs.Auth.UserDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> DeactivateUser(int id)
+        {
+            try
+            {
+                var currentUserId = GetCurrentUserId();
+
+                // Prevent self-deactivation
                 if (id == currentUserId)
                     return BadRequest(new { message = "Cannot deactivate your own account" });
 
@@ -113,7 +166,12 @@ namespace GlosterIktato.API.Controllers
                 if (!result)
                     return NotFound(new { message = $"User with ID {id} not found" });
 
-                return NoContent();
+                // Return the updated user
+                var updatedUser = await _userService.GetUserByIdAsync(id);
+                if (updatedUser == null)
+                    return NotFound(new { message = $"User with ID {id} not found" });
+
+                return Ok(updatedUser);
             }
             catch (Exception ex)
             {

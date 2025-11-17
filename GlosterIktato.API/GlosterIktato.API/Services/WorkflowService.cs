@@ -153,22 +153,36 @@ namespace GlosterIktato.API.Services
                 // Ha nincs manual assign, próbálj auto-assign-t UserGroup vagy Role alapján
                 if (!newAssignedUserId.HasValue)
                 {
-                    var autoAssignedUserId = await AutoAssignUserByStatusAsync(nextStatus, document.CompanyId);
-                    if (autoAssignedUserId.HasValue)
+                    // Ha Done státuszba kerül, akkor a létrehozó user legyen hozzárendelve
+                    if (nextStatus == DocumentStatuses.Done)
                     {
-                        var autoAssignedUser = await _context.Users.FindAsync(autoAssignedUserId.Value);
-                        if (autoAssignedUser != null)
+                        document.AssignedToUserId = document.CreatedByUserId;
+                        newAssignedUserId = document.CreatedByUserId;
+                        var createdByUser = await _context.Users.FindAsync(document.CreatedByUserId);
+                        if (createdByUser != null)
                         {
-                            document.AssignedToUserId = autoAssignedUser.Id;
-                            newAssignedUserId = autoAssignedUser.Id;
-                            newAssignedUserName = $"{autoAssignedUser.FirstName} {autoAssignedUser.LastName}";
+                            newAssignedUserName = $"{createdByUser.FirstName} {createdByUser.LastName}";
                         }
                     }
                     else
                     {
-                        // Ha nincs megfelelő user, maradjon null (admin később hozzárendelheti)
-                        document.AssignedToUserId = null;
-                        _logger.LogWarning("No suitable user found for auto-assign to status {Status}", nextStatus);
+                        var autoAssignedUserId = await AutoAssignUserByStatusAsync(nextStatus, document.CompanyId);
+                        if (autoAssignedUserId.HasValue)
+                        {
+                            var autoAssignedUser = await _context.Users.FindAsync(autoAssignedUserId.Value);
+                            if (autoAssignedUser != null)
+                            {
+                                document.AssignedToUserId = autoAssignedUser.Id;
+                                newAssignedUserId = autoAssignedUser.Id;
+                                newAssignedUserName = $"{autoAssignedUser.FirstName} {autoAssignedUser.LastName}";
+                            }
+                        }
+                        else
+                        {
+                            // Ha nincs megfelelő user, maradjon null (admin később hozzárendelheti)
+                            document.AssignedToUserId = null;
+                            _logger.LogWarning("No suitable user found for auto-assign to status {Status}", nextStatus);
+                        }
                     }
                 }
 
@@ -272,16 +286,25 @@ namespace GlosterIktato.API.Services
                 }
 
                 var oldStatus = document.Status;
+                var oldAssignedUserId = document.AssignedToUserId;
 
                 // Státusz frissítése
                 document.Status = DocumentStatuses.Rejected;
                 document.ModifiedByUserId = currentUserId;
                 document.ModifiedAt = DateTime.UtcNow;
-                document.AssignedToUserId = null; // Senki sincs hozzárendelve
+                document.AssignedToUserId = document.CreatedByUserId; // Visszaállítjuk a létrehozó userre
+
+                // Létrehozó user nevének lekérése a response-hoz
+                string? assignedToUserName = null;
+                var createdByUser = await _context.Users.FindAsync(document.CreatedByUserId);
+                if (createdByUser != null)
+                {
+                    assignedToUserName = $"{createdByUser.FirstName} {createdByUser.LastName}";
+                }
 
                 await _context.SaveChangesAsync();
 
-                // History log
+                // History log - Status change
                 var history = new DocumentHistory
                 {
                     DocumentId = documentId,
@@ -293,6 +316,22 @@ namespace GlosterIktato.API.Services
                     CreatedAt = DateTime.UtcNow
                 };
                 _context.DocumentHistories.Add(history);
+
+                // History log - Assignment (ha történt változás)
+                if (oldAssignedUserId != document.CreatedByUserId)
+                {
+                    var assignHistory = new DocumentHistory
+                    {
+                        DocumentId = documentId,
+                        UserId = currentUserId,
+                        Action = "Assigned",
+                        OldValue = oldAssignedUserId?.ToString(),
+                        NewValue = document.CreatedByUserId.ToString(),
+                        Comment = $"Hozzárendelve: {assignedToUserName ?? "Létrehozó felhasználó"}",
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    _context.DocumentHistories.Add(assignHistory);
+                }
 
                 // Comment automatikus létrehozása
                 var comment = new DocumentComment
@@ -315,7 +354,9 @@ namespace GlosterIktato.API.Services
                     Success = true,
                     Message = "Dokumentum elutasítva",
                     NewStatus = DocumentStatuses.Rejected,
-                    NewStatusDisplay = DocumentStatuses.Rejected.ToDisplayString()
+                    NewStatusDisplay = DocumentStatuses.Rejected.ToDisplayString(),
+                    AssignedToUserId = document.CreatedByUserId,
+                    AssignedToUserName = assignedToUserName
                 };
             }
             catch (Exception ex)

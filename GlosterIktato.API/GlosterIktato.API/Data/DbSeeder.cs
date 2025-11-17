@@ -14,7 +14,7 @@ namespace GlosterIktato.API.Data
                 {
                     new Company
                     {
-                        Name = "P92 Gloster Péksütemény Kft.",
+                        Name = "P92 Gloster IT Kft.",
                         TaxNumber = "12345678-2-41",
                         Address = "1011 Budapest, Fő utca 1.",
                         IsActive = true
@@ -40,19 +40,30 @@ namespace GlosterIktato.API.Data
             }
 
             // 2. SZEREPKÖRÖK
-            if (!await context.Roles.AnyAsync())
+            var expectedRoles = new List<(string Name, string Description)>
             {
-                var roles = new List<Role>
-                {
-                    new Role { Name = "Admin", Description = "Rendszergazda - teljes hozzáférés" },
-                    new Role { Name = "User", Description = "Normál felhasználó - iktatás" },
-                    new Role { Name = "Accountant", Description = "Könyvelő - számlák véglegesítése" },
-                    new Role { Name = "Approver", Description = "Jóváhagyó - dokumentumok jóváhagyása" },
-                    new Role { Name = "ElevatedApprover", Description = "Emelt szintű jóváhagyó - nagy értékű számlák" }
-                };
-                await context.Roles.AddRangeAsync(roles);
+                ("Admin", "Rendszergazda - teljes hozzáférés"),
+                ("User", "Normál felhasználó - iktatás"),
+                ("Accountant", "Könyvelő - számlák véglegesítése"),
+                ("Approver", "Jóváhagyó - dokumentumok jóváhagyása"),
+                ("ElevatedApprover", "Emelt szintű jóváhagyó - nagy értékű számlák")
+            };
+
+            var existingRoleNames = await context.Roles.Select(r => r.Name).ToListAsync();
+            var missingRoles = expectedRoles
+                .Where(er => !existingRoleNames.Contains(er.Name))
+                .Select(er => new Role { Name = er.Name, Description = er.Description })
+                .ToList();
+
+            if (missingRoles.Any())
+            {
+                await context.Roles.AddRangeAsync(missingRoles);
                 await context.SaveChangesAsync();
-                Console.WriteLine("✓ 5 szerepkör létrehozva");
+                Console.WriteLine($"✓ {missingRoles.Count} hiányzó szerepkör létrehozva (összesen: {await context.Roles.CountAsync()})");
+            }
+            else
+            {
+                Console.WriteLine($"✓ Összes szerepkör már létezik ({await context.Roles.CountAsync()} db)");
             }
 
             // 3. FELHASZNÁLÓK
@@ -82,7 +93,7 @@ namespace GlosterIktato.API.Data
                     },
                     new User
                     {
-                        Email = "jóváhagyó@gloster.hu",
+                        Email = "jovahagyo@gloster.hu",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("jovahagyo123"),
                         FirstName = "Jóváhagyós",
                         LastName = "Katalin",
@@ -98,7 +109,7 @@ namespace GlosterIktato.API.Data
                     },
                     new User
                     {
-                        Email = "konyvelő@gloster.hu",
+                        Email = "konyvelo@gloster.hu",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("konyvelo123"),
                         FirstName = "Könyvelős",
                         LastName = "Anna",
@@ -120,9 +131,9 @@ namespace GlosterIktato.API.Data
                 // 3.1 USER ↔ COMPANY HOZZÁRENDELÉSEK
                 var admin = await context.Users.FirstAsync(u => u.Email == "admin@gloster.hu");
                 var iktato = await context.Users.FirstAsync(u => u.Email == "iktato@gloster.hu");
-                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jóváhagyó@gloster.hu");
+                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jovahagyo@gloster.hu");
                 var vezeto = await context.Users.FirstAsync(u => u.Email == "vezeto@gloster.hu");
-                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelő@gloster.hu");
+                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelo@gloster.hu");
                 var asszisztens = await context.Users.FirstAsync(u => u.Email == "asszisztens@gloster.hu");
 
                 var userCompanies = new List<UserCompany>
@@ -202,9 +213,9 @@ namespace GlosterIktato.API.Data
                 var company3 = await context.Companies.FirstAsync(c => c.Name.Contains("P94"));
 
                 var admin = await context.Users.FirstAsync(u => u.Email == "admin@gloster.hu");
-                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jóváhagyó@gloster.hu");
+                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jovahagyo@gloster.hu");
                 var vezeto = await context.Users.FirstAsync(u => u.Email == "vezeto@gloster.hu");
-                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelő@gloster.hu");
+                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelo@gloster.hu");
                 var asszisztens = await context.Users.FirstAsync(u => u.Email == "asszisztens@gloster.hu");
 
                 var userGroups = new List<UserGroup>
@@ -213,7 +224,7 @@ namespace GlosterIktato.API.Data
                     new UserGroup
                     {
                         Name = "P92 Finance Approvers",
-                        Description = "Pénzügyi jóváhagyók - P92 Péksütemény",
+                        Description = "Pénzügyi jóváhagyók - P92 IT",
                         GroupType = "Approver",
                         CompanyId = company1.Id,
                         IsActive = true,
@@ -224,7 +235,7 @@ namespace GlosterIktato.API.Data
                     new UserGroup
                     {
                         Name = "P92 Senior Approvers",
-                        Description = "Felső szintű jóváhagyók - P92 Péksütemény",
+                        Description = "Felső szintű jóváhagyók - P92 IT",
                         GroupType = "ElevatedApprover",
                         CompanyId = company1.Id,
                         IsActive = true,
@@ -235,7 +246,7 @@ namespace GlosterIktato.API.Data
                     new UserGroup
                     {
                         Name = "P92 Accounting Team",
-                        Description = "Könyvelési csapat - P92 Péksütemény",
+                        Description = "Könyvelési csapat - P92 IT",
                         GroupType = "Accountant",
                         CompanyId = company1.Id,
                         IsActive = true,
@@ -459,179 +470,200 @@ namespace GlosterIktato.API.Data
             }
 
             // 4. DOKUMENTUMTÍPUSOK
-            if (!await context.DocumentTypes.AnyAsync())
+            var expectedDocumentTypes = new List<(string Name, string Code)>
             {
-                var documentTypes = new List<DocumentType>
-                {
-                    new DocumentType { Name = "Számla", Code = "SZLA", IsActive = true },
-                    new DocumentType { Name = "Teljesítésigazolás", Code = "TIG", IsActive = true },
-                    new DocumentType { Name = "Szerződés", Code = "SZ", IsActive = true },
-                    new DocumentType { Name = "Egyéb", Code = "E", IsActive = true }
-                };
-                await context.DocumentTypes.AddRangeAsync(documentTypes);
+                ("Számla", "SZLA"),
+                ("Teljesítésigazolás", "TIG"),
+                ("Szerződés", "SZ"),
+                ("Egyéb", "E")
+            };
+
+            var existingDocTypeCodes = await context.DocumentTypes.Select(dt => dt.Code).ToListAsync();
+            var missingDocTypes = expectedDocumentTypes
+                .Where(edt => !existingDocTypeCodes.Contains(edt.Code))
+                .Select(edt => new DocumentType { Name = edt.Name, Code = edt.Code, IsActive = true })
+                .ToList();
+
+            if (missingDocTypes.Any())
+            {
+                await context.DocumentTypes.AddRangeAsync(missingDocTypes);
                 await context.SaveChangesAsync();
-                Console.WriteLine("✓ 4 dokumentumtípus létrehozva");
+                Console.WriteLine($"✓ {missingDocTypes.Count} hiányzó dokumentumtípus létrehozva (összesen: {await context.DocumentTypes.CountAsync()})");
+            }
+            else
+            {
+                Console.WriteLine($"✓ Összes dokumentumtípus már létezik ({await context.DocumentTypes.CountAsync()} db)");
             }
 
             // 5. SZÁLLÍTÓK
-            if (!await context.Suppliers.AnyAsync())
+            var expectedSuppliers = new List<Supplier>
             {
-                var suppliers = new List<Supplier>
+                new Supplier
                 {
-                    new Supplier
-                    {
-                        Name = "Magyar Telekom Nyrt.",
-                        TaxNumber = "10101010-2-44",
-                        Address = "1013 Budapest, Krisztina krt. 55.",
-                        ContactPerson = "Kovács János",
-                        Email = "szamlazas@telekom.hu",
-                        Phone = "+36-1-234-5678",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "E.ON Hungária Zrt.",
-                        TaxNumber = "20202020-2-45",
-                        Address = "1134 Budapest, Váci út 17.",
-                        ContactPerson = "Nagy Éva",
-                        Email = "ugyfelszolgalat@eon.hu",
-                        Phone = "+36-1-345-6789",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Office Depot Kft.",
-                        TaxNumber = "30303030-2-46",
-                        Address = "1117 Budapest, Dombóvári út 27.",
-                        ContactPerson = "Tóth Péter",
-                        Email = "rendeles@officedepot.hu",
-                        Phone = "+36-1-456-7890",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "MOL Magyar Olaj- és Gázipari Nyrt.",
-                        TaxNumber = "40404040-2-47",
-                        Address = "1117 Budapest, Október huszonharmadika u. 18.",
-                        ContactPerson = "Szabó Gábor",
-                        Email = "flotta@mol.hu",
-                        Phone = "+36-1-567-8901",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "METRO Cash & Carry Kft.",
-                        TaxNumber = "50505050-2-48",
-                        Address = "1211 Budapest, Hungária körút 168.",
-                        ContactPerson = "Kiss Andrea",
-                        Email = "b2b@metro.hu",
-                        Phone = "+36-1-678-9012",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Vodafone Magyarország Zrt.",
-                        TaxNumber = "60606060-2-49",
-                        Address = "1096 Budapest, Lechner Ödön fasor 6.",
-                        ContactPerson = "Horváth Zsolt",
-                        Email = "vallalatiszolgalat@vodafone.hu",
-                        Phone = "+36-1-789-0123",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Tesco-Global Áruházak Zrt.",
-                        TaxNumber = "70707070-2-50",
-                        Address = "2040 Budaörs, Neumann János út 1.",
-                        ContactPerson = "Molnár Ildikó",
-                        Email = "beszallito@tesco.hu",
-                        Phone = "+36-1-890-1234",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "DHL Express Hungary Kft.",
-                        TaxNumber = "80808080-2-51",
-                        Address = "1097 Budapest, Fehérakác utca 2.",
-                        ContactPerson = "Farkas Tamás",
-                        Email = "info@dhl.hu",
-                        Phone = "+36-1-901-2345",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Printnet Nyomdaipari Kft.",
-                        TaxNumber = "90909090-2-52",
-                        Address = "1116 Budapest, Fehérvári út 89-95.",
-                        ContactPerson = "Lakatos Ágnes",
-                        Email = "rendeles@printnet.hu",
-                        Phone = "+36-1-012-3456",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Nestlé Hungária Kft.",
-                        TaxNumber = "11111111-2-53",
-                        Address = "1033 Budapest, Szentendrei út 89-93.",
-                        ContactPerson = "Papp Róbert",
-                        Email = "kapcsolat@nestle.hu",
-                        Phone = "+36-1-123-4567",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Coca-Cola HBC Magyarország Kft.",
-                        TaxNumber = "22222222-2-54",
-                        Address = "1097 Budapest, Könyves Kálmán krt. 76.",
-                        ContactPerson = "Balogh Mária",
-                        Email = "ugyfelszolgalat@coca-cola.hu",
-                        Phone = "+36-1-234-5678",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Spar Magyarország Kft.",
-                        TaxNumber = "33333333-2-55",
-                        Address = "2051 Biatorbágy, Mészárosok útja 2.",
-                        ContactPerson = "Simon Ferenc",
-                        Email = "beszallitok@spar.hu",
-                        Phone = "+36-1-345-6789",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Budapest Bank Zrt.",
-                        TaxNumber = "44444444-2-56",
-                        Address = "1138 Budapest, Váci út 188.",
-                        ContactPerson = "Németh Klára",
-                        Email = "info@budapestbank.hu",
-                        Phone = "+36-1-456-7890",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Waberer's International Nyrt.",
-                        TaxNumber = "55555555-2-57",
-                        Address = "2040 Budaörs, Neumann János út 1/C.",
-                        ContactPerson = "Varga István",
-                        Email = "logisztika@waberers.hu",
-                        Phone = "+36-1-567-8901",
-                        IsActive = true
-                    },
-                    new Supplier
-                    {
-                        Name = "Continental Reifen Hungary Kft.",
-                        TaxNumber = "66666666-2-58",
-                        Address = "5000 Szolnok, Tiszaligeti sétány 19.",
-                        ContactPerson = "Török Márta",
-                        Email = "kapcsolat@continental.hu",
-                        Phone = "+36-1-678-9012",
-                        IsActive = true
-                    }
-                };
-                await context.Suppliers.AddRangeAsync(suppliers);
+                    Name = "Magyar Telekom Nyrt.",
+                    TaxNumber = "10101010-2-44",
+                    Address = "1013 Budapest, Krisztina krt. 55.",
+                    ContactPerson = "Kovács János",
+                    Email = "szamlazas@telekom.hu",
+                    Phone = "+36-1-234-5678",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "E.ON Hungária Zrt.",
+                    TaxNumber = "20202020-2-45",
+                    Address = "1134 Budapest, Váci út 17.",
+                    ContactPerson = "Nagy Éva",
+                    Email = "ugyfelszolgalat@eon.hu",
+                    Phone = "+36-1-345-6789",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Office Depot Kft.",
+                    TaxNumber = "30303030-2-46",
+                    Address = "1117 Budapest, Dombóvári út 27.",
+                    ContactPerson = "Tóth Péter",
+                    Email = "rendeles@officedepot.hu",
+                    Phone = "+36-1-456-7890",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "MOL Magyar Olaj- és Gázipari Nyrt.",
+                    TaxNumber = "40404040-2-47",
+                    Address = "1117 Budapest, Október huszonharmadika u. 18.",
+                    ContactPerson = "Szabó Gábor",
+                    Email = "flotta@mol.hu",
+                    Phone = "+36-1-567-8901",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "METRO Cash & Carry Kft.",
+                    TaxNumber = "50505050-2-48",
+                    Address = "1211 Budapest, Hungária körút 168.",
+                    ContactPerson = "Kiss Andrea",
+                    Email = "b2b@metro.hu",
+                    Phone = "+36-1-678-9012",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Vodafone Magyarország Zrt.",
+                    TaxNumber = "60606060-2-49",
+                    Address = "1096 Budapest, Lechner Ödön fasor 6.",
+                    ContactPerson = "Horváth Zsolt",
+                    Email = "vallalatiszolgalat@vodafone.hu",
+                    Phone = "+36-1-789-0123",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Tesco-Global Áruházak Zrt.",
+                    TaxNumber = "70707070-2-50",
+                    Address = "2040 Budaörs, Neumann János út 1.",
+                    ContactPerson = "Molnár Ildikó",
+                    Email = "beszallito@tesco.hu",
+                    Phone = "+36-1-890-1234",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "DHL Express Hungary Kft.",
+                    TaxNumber = "80808080-2-51",
+                    Address = "1097 Budapest, Fehérakác utca 2.",
+                    ContactPerson = "Farkas Tamás",
+                    Email = "info@dhl.hu",
+                    Phone = "+36-1-901-2345",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Printnet Nyomdaipari Kft.",
+                    TaxNumber = "90909090-2-52",
+                    Address = "1116 Budapest, Fehérvári út 89-95.",
+                    ContactPerson = "Lakatos Ágnes",
+                    Email = "rendeles@printnet.hu",
+                    Phone = "+36-1-012-3456",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Nestlé Hungária Kft.",
+                    TaxNumber = "11111111-2-53",
+                    Address = "1033 Budapest, Szentendrei út 89-93.",
+                    ContactPerson = "Papp Róbert",
+                    Email = "kapcsolat@nestle.hu",
+                    Phone = "+36-1-123-4567",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Coca-Cola HBC Magyarország Kft.",
+                    TaxNumber = "22222222-2-54",
+                    Address = "1097 Budapest, Könyves Kálmán krt. 76.",
+                    ContactPerson = "Balogh Mária",
+                    Email = "ugyfelszolgalat@coca-cola.hu",
+                    Phone = "+36-1-234-5678",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Spar Magyarország Kft.",
+                    TaxNumber = "33333333-2-55",
+                    Address = "2051 Biatorbágy, Mészárosok útja 2.",
+                    ContactPerson = "Simon Ferenc",
+                    Email = "beszallitok@spar.hu",
+                    Phone = "+36-1-345-6789",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Budapest Bank Zrt.",
+                    TaxNumber = "44444444-2-56",
+                    Address = "1138 Budapest, Váci út 188.",
+                    ContactPerson = "Németh Klára",
+                    Email = "info@budapestbank.hu",
+                    Phone = "+36-1-456-7890",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Waberer's International Nyrt.",
+                    TaxNumber = "55555555-2-57",
+                    Address = "2040 Budaörs, Neumann János út 1/C.",
+                    ContactPerson = "Varga István",
+                    Email = "logisztika@waberers.hu",
+                    Phone = "+36-1-567-8901",
+                    IsActive = true
+                },
+                new Supplier
+                {
+                    Name = "Continental Reifen Hungary Kft.",
+                    TaxNumber = "66666666-2-58",
+                    Address = "5000 Szolnok, Tiszaligeti sétány 19.",
+                    ContactPerson = "Török Márta",
+                    Email = "kapcsolat@continental.hu",
+                    Phone = "+36-1-678-9012",
+                    IsActive = true
+                }
+            };
+
+            var existingSupplierNames = await context.Suppliers.Select(s => s.Name).ToListAsync();
+            var missingSuppliers = expectedSuppliers
+                .Where(es => !existingSupplierNames.Contains(es.Name))
+                .ToList();
+
+            if (missingSuppliers.Any())
+            {
+                await context.Suppliers.AddRangeAsync(missingSuppliers);
                 await context.SaveChangesAsync();
-                Console.WriteLine($"✓ {suppliers.Count} szállító létrehozva");
+                Console.WriteLine($"✓ {missingSuppliers.Count} hiányzó szállító hozzáadva (összesen: {await context.Suppliers.CountAsync()})");
+            }
+            else
+            {
+                Console.WriteLine($"✓ Összes szállító már létezik ({await context.Suppliers.CountAsync()} db)");
             }
 
             // 6. DEMO DOKUMENTUMOK (DISABLED - documents without physical files cause issues)
