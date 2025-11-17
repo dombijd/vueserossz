@@ -65,13 +65,13 @@
 							<strong class="text-gray-700 mr-2">Iktató:</strong> iktato@gloster.hu / iktato123
 						</div>
 						<div class="text-xs text-gray-500 px-2 py-2 bg-gray-50 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-700">
-							<strong class="text-gray-700 mr-2">Jóváhagyó:</strong> jóváhagyó@gloster.hu / jovahagyo123
+							<strong class="text-gray-700 mr-2">Jóváhagyó:</strong> jovahagyo@gloster.hu / jovahagyo123
 						</div>
 						<div class="text-xs text-gray-500 px-2 py-2 bg-gray-50 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-700">
 							<strong class="text-gray-700 mr-2">Vezető:</strong> vezeto@gloster.hu / vezeto123
 						</div>
 						<div class="text-xs text-gray-500 px-2 py-2 bg-gray-50 rounded-md cursor-pointer transition-all duration-200 hover:bg-gray-100 hover:text-gray-700">
-							<strong class="text-gray-700 mr-2">Könyvelő:</strong> konyvelő@gloster.hu / konyvelo123
+							<strong class="text-gray-700 mr-2">Könyvelő:</strong> konyvelo@gloster.hu / konyvelo123
 						</div>
 					</div>
 				</div>

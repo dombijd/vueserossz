@@ -38,6 +38,7 @@ namespace GlosterIktato.API.Services
                     Email = u.Email,
                     FirstName = u.FirstName,
                     LastName = u.LastName,
+                    IsActive = u.IsActive,
                     Companies = u.UserCompanies
                         .Where(uc => uc.Company.IsActive)
                         .Select(uc => new CompanyDto
@@ -66,7 +67,7 @@ namespace GlosterIktato.API.Services
                         .ThenInclude(uc => uc.Company)
                     .Include(u => u.UserRoles)
                         .ThenInclude(ur => ur.Role)
-                    .FirstOrDefaultAsync(u => u.Id == userId && u.IsActive);
+                    .FirstOrDefaultAsync(u => u.Id == userId);
 
                 if (user == null)
                     return null;
@@ -77,6 +78,7 @@ namespace GlosterIktato.API.Services
                     Email = user.Email,
                     FirstName = user.FirstName,
                     LastName = user.LastName,
+                    IsActive = user.IsActive,
                     Companies = user.UserCompanies
                         .Where(uc => uc.Company.IsActive)
                         .Select(uc => new CompanyDto
@@ -116,6 +118,7 @@ namespace GlosterIktato.API.Services
                     Email = u.Email,
                     FirstName = u.FirstName,
                     LastName = u.LastName,
+                    IsActive = u.IsActive,
                     Companies = u.UserCompanies
                         .Where(uc => uc.Company.IsActive)
                         .Select(uc => new CompanyDto
@@ -179,6 +182,38 @@ namespace GlosterIktato.API.Services
             }
         }
 
+        public async Task<bool> ActivateUserAsync(int userId, int activatedByUserId)
+        {
+            try
+            {
+                var user = await _context.Users.FindAsync(userId);
+
+                if (user == null)
+                {
+                    _logger.LogWarning("User {UserId} not found for activation", userId);
+                    return false;
+                }
+
+                if (user.IsActive)
+                {
+                    _logger.LogInformation("User {UserId} is already active", userId);
+                    return true;
+                }
+
+                user.IsActive = true;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("User activated: {UserId} by user {ActivatedBy}", userId, activatedByUserId);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error activating user {UserId}", userId);
+                return false;
+            }
+        }
+
         public async Task<bool> DeactivateUserAsync(int userId, int deactivatedByUserId)
         {
             try
@@ -191,19 +226,16 @@ namespace GlosterIktato.API.Services
                     return false;
                 }
 
-                // Check if already inactive
                 if (!user.IsActive)
                 {
                     _logger.LogInformation("User {UserId} is already inactive", userId);
-                    return true; // Return true as the desired state is already achieved
+                    return true;
                 }
 
-                // Soft delete: Set IsActive to false
                 user.IsActive = false;
-
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("User deactivated (soft delete): {UserId} by user {DeactivatedBy}", userId, deactivatedByUserId);
+                _logger.LogInformation("User deactivated: {UserId} by user {DeactivatedBy}", userId, deactivatedByUserId);
 
                 return true;
             }
@@ -409,6 +441,48 @@ namespace GlosterIktato.API.Services
             {
                 _logger.LogError(ex, "Error updating user {UserId}", userId);
                 throw;
+            }
+        }
+
+        /// <summary>
+        /// Get all users including inactive ones (admin only)
+        /// </summary>
+        public async Task<List<UserDto>> GetAllUsersAsync()
+        {
+            try
+            {
+                var users = await _context.Users
+                    .Include(u => u.UserCompanies)
+                        .ThenInclude(uc => uc.Company)
+                    .Include(u => u.UserRoles)
+                        .ThenInclude(ur => ur.Role)
+                    .OrderBy(u => u.LastName)
+                    .ThenBy(u => u.FirstName)
+                    .ToListAsync();
+
+                return users.Select(u => new UserDto
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    IsActive = u.IsActive,
+                    Companies = u.UserCompanies
+                        .Where(uc => uc.Company.IsActive)
+                        .Select(uc => new CompanyDto
+                        {
+                            Id = uc.Company.Id,
+                            Name = uc.Company.Name,
+                            TaxNumber = uc.Company.TaxNumber
+                        })
+                        .ToList(),
+                    Roles = u.UserRoles.Select(ur => ur.Role.Name).ToList()
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching all users");
+                return new List<UserDto>();
             }
         }
     }

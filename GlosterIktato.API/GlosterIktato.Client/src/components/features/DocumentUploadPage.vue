@@ -122,10 +122,12 @@ const fileUploadRef = ref<InstanceType<typeof FileUpload> | null>(null);
 
 // Computed
 const companyOptions = computed(() =>
-	companies.value.map(c => ({
-		label: c.name,
-		value: c.id
-	}))
+	companies.value
+		.filter(c => c.isActive !== false) // Szűrjük az aktív cégeket
+		.map(c => ({
+			label: c.name,
+			value: c.id
+		}))
 );
 
 const documentTypeOptions = computed(() =>
@@ -150,17 +152,21 @@ async function loadCompanies() {
 		// First try to use user's companies
 		const userCompanies = authStore.userCompanies;
 		if (userCompanies.length > 0) {
-			companies.value = userCompanies;
+			// Szűrjük az aktív cégeket (csak azok, ahol isActive !== false)
+			// A backend már csak aktívakat küld, de biztonsági okokból szűrünk
+			companies.value = userCompanies.filter(c => c.isActive !== false);
 			// Auto-select if only one company
-			if (userCompanies.length === 1) {
-				selectedCompanyId.value = userCompanies[0].id;
+			if (companies.value.length === 1) {
+				selectedCompanyId.value = companies.value[0].id;
 			}
 		} else {
 			// Fallback to API
 			const response = await api.get<CompanyDto[]>('/companies');
-			companies.value = response.data;
-			if (response.data.length === 1) {
-				selectedCompanyId.value = response.data[0].id;
+			// Szűrjük az aktív cégeket (csak azok, ahol isActive !== false)
+			// A backend már csak aktívakat küld, de biztonsági okokból szűrünk
+			companies.value = response.data.filter(c => c.isActive !== false);
+			if (companies.value.length === 1) {
+				selectedCompanyId.value = companies.value[0].id;
 			}
 		}
 	} catch (err) {

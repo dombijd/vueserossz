@@ -12,19 +12,31 @@ namespace GlosterIktato.API.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly ILogger<CompanyService> _logger;
+        private readonly IFileStorageService _fileStorageService;
 
-        public CompanyService(ApplicationDbContext context, ILogger<CompanyService> logger)
+        public CompanyService(
+            ApplicationDbContext context, 
+            ILogger<CompanyService> logger,
+            IFileStorageService fileStorageService)
         {
             _context = context;
             _logger = logger;
+            _fileStorageService = fileStorageService;
         }
 
-        public async Task<List<CompanyDto>> GetAllCompaniesAsync()
+        public async Task<List<CompanyDto>> GetAllCompaniesAsync(bool includeInactive = false)
         {
             try
             {
-                var companies = await _context.Companies
-                    .Where(c => c.IsActive)
+                var query = _context.Companies.AsQueryable();
+                
+                // Ha nem kérjük az inaktívakat, csak az aktívakat adjuk vissza
+                if (!includeInactive)
+                {
+                    query = query.Where(c => c.IsActive);
+                }
+
+                var companies = await query
                     .OrderBy(c => c.Name)
                     .ToListAsync();
 
@@ -32,7 +44,8 @@ namespace GlosterIktato.API.Services
                 {
                     Id = c.Id,
                     Name = c.Name,
-                    TaxNumber = c.TaxNumber
+                    TaxNumber = c.TaxNumber,
+                    IsActive = c.IsActive
                 }).ToList();
             }
             catch (Exception ex)
@@ -56,7 +69,8 @@ namespace GlosterIktato.API.Services
                 {
                     Id = company.Id,
                     Name = company.Name,
-                    TaxNumber = company.TaxNumber
+                    TaxNumber = company.TaxNumber,
+                    IsActive = company.IsActive
                 };
             }
             catch (Exception ex)
@@ -81,7 +95,8 @@ namespace GlosterIktato.API.Services
                 {
                     Id = c.Id,
                     Name = c.Name,
-                    TaxNumber = c.TaxNumber
+                    TaxNumber = c.TaxNumber,
+                    IsActive = c.IsActive
                 }).ToList();
             }
             catch (Exception ex)
@@ -122,7 +137,8 @@ namespace GlosterIktato.API.Services
                 {
                     Id = company.Id,
                     Name = company.Name,
-                    TaxNumber = company.TaxNumber
+                    TaxNumber = company.TaxNumber,
+                    IsActive = company.IsActive
                 };
             }
             catch (Exception ex)
@@ -178,7 +194,8 @@ namespace GlosterIktato.API.Services
                 {
                     Id = company.Id,
                     Name = company.Name,
-                    TaxNumber = company.TaxNumber
+                    TaxNumber = company.TaxNumber,
+                    IsActive = company.IsActive
                 };
             }
             catch (Exception ex)
@@ -207,12 +224,57 @@ namespace GlosterIktato.API.Services
                     return true; // Return true as the desired state is already achieved
                 }
 
-                // Soft delete: Set IsActive to false
+                // 1. Lekérjük az összes dokumentumot, amelyek ehhez a céghez tartoznak
+                var documents = await _context.Documents
+                    .Where(d => d.CompanyId == id)
+                    .ToListAsync();
+
+                _logger.LogInformation("Found {Count} documents for company {CompanyId} to delete", documents.Count, id);
+
+                // 2. Töröljük a dokumentum kapcsolatokat (DocumentRelations) először
+                var documentIds = documents.Select(d => d.Id).ToList();
+                var documentRelations = await _context.DocumentRelations
+                    .Where(dr => documentIds.Contains(dr.DocumentId) || documentIds.Contains(dr.RelatedDocumentId))
+                    .ToListAsync();
+
+                if (documentRelations.Any())
+                {
+                    _context.DocumentRelations.RemoveRange(documentRelations);
+                    _logger.LogInformation("Removed {Count} document relations", documentRelations.Count);
+                }
+
+                // 3. Töröljük a fájlokat a Storage mappából és töröljük a dokumentumokat az adatbázisból
+                foreach (var document in documents)
+                {
+                    try
+                    {
+                        // Töröljük a fájlt a Storage mappából, ha létezik
+                        if (!string.IsNullOrWhiteSpace(document.StoragePath))
+                        {
+                            await _fileStorageService.DeleteFileAsync(document.StoragePath);
+                            _logger.LogInformation("File deleted from storage: {StoragePath}", document.StoragePath);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Logoljuk, de ne állítsuk meg a folyamatot, ha egy fájl törlése sikertelen
+                        _logger.LogWarning(ex, "Error deleting file {StoragePath} for document {DocumentId}", 
+                            document.StoragePath, document.Id);
+                    }
+
+                    // Hard delete: Töröljük a dokumentumot az adatbázisból
+                    // A DocumentHistory és DocumentComment entitások cascade delete-tel automatikusan törlődnek
+                    _context.Documents.Remove(document);
+                    _logger.LogInformation("Document {DocumentId} removed from database", document.Id);
+                }
+
+                // 3. Soft delete: Set IsActive to false
                 company.IsActive = false;
 
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Company deactivated (soft delete): {CompanyId} by user {UserId}", id, deactivatedByUserId);
+                _logger.LogInformation("Company deactivated (soft delete): {CompanyId} by user {UserId}. {DocumentCount} documents deleted from database.", 
+                    id, deactivatedByUserId, documents.Count);
 
                 return true;
             }

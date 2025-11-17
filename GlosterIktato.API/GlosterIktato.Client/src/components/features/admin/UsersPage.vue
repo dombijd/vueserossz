@@ -76,12 +76,22 @@
 								Szerkesztés
 							</BaseButton>
 							<BaseButton
+								v-if="row.isActive"
 								variant="ghost"
 								size="sm"
-								:left-icon="['fas', 'trash']"
-								@click="confirmDelete(row)"
+								:left-icon="['fas', 'ban']"
+								@click="confirmDeactivate(row)"
 							>
-								Törlés
+								Deaktiválás
+							</BaseButton>
+							<BaseButton
+								v-else
+								variant="ghost"
+								size="sm"
+								:left-icon="['fas', 'check']"
+								@click="confirmActivate(row)"
+							>
+								Aktiválás
 							</BaseButton>
 						</div>
 					</template>
@@ -191,17 +201,30 @@
 			</template>
 		</BaseModal>
 
-		<!-- Delete Confirmation Dialog -->
+		<!-- Activate Confirmation Dialog -->
 		<ConfirmDialog
-			v-model="showDeleteDialog"
+			v-model="showActivateDialog"
+			title="Felhasználó aktiválása"
+			message="Biztosan aktiválod ezt a felhasználót?"
+			confirm-text="Aktiválás"
+			cancel-text="Mégse"
+			variant="primary"
+			:loading="activating"
+			@confirm="handleActivate"
+			@cancel="cancelActivate"
+		/>
+
+		<!-- Deactivate Confirmation Dialog -->
+		<ConfirmDialog
+			v-model="showDeactivateDialog"
 			title="Felhasználó deaktiválása"
 			message="Biztosan deaktiválod ezt a felhasználót?"
 			confirm-text="Deaktiválás"
 			cancel-text="Mégse"
 			variant="danger"
-			:loading="deleting"
-			@confirm="handleDelete"
-			@cancel="cancelDelete"
+			:loading="deactivating"
+			@confirm="handleDeactivate"
+			@cancel="cancelDeactivate"
 		/>
 	</AppLayout>
 </template>
@@ -226,6 +249,7 @@ interface Role {
 interface Company {
 	id: number;
 	name: string;
+	isActive?: boolean;
 }
 
 interface UserDto {
@@ -267,11 +291,14 @@ const users = ref<UserDto[]>([]);
 const companies = ref<Company[]>([]);
 const isLoading = ref(false);
 const saving = ref(false);
-const deleting = ref(false);
+const activating = ref(false);
+const deactivating = ref(false);
 const showCreateModal = ref(false);
-const showDeleteDialog = ref(false);
+const showActivateDialog = ref(false);
+const showDeactivateDialog = ref(false);
 const editingUser = ref<UserDto | null>(null);
-const userToDelete = ref<UserDto | null>(null);
+const userToActivate = ref<UserDto | null>(null);
+const userToDeactivate = ref<UserDto | null>(null);
 const searchQuery = ref('');
 
 const availableRoles = ['Admin', 'User', 'Accountant', 'Manager'];
@@ -314,7 +341,7 @@ const filteredUsers = computed(() => {
 async function loadUsers() {
 	isLoading.value = true;
 	try {
-		const response = await api.get<UserDto[]>('/users');
+		const response = await api.get<UserDto[]>('/admin/users');
 		users.value = response.data;
 	} catch (err) {
 		toastError('Hiba történt a felhasználók betöltése során');
@@ -327,7 +354,8 @@ async function loadUsers() {
 async function loadCompanies() {
 	try {
 		const response = await api.get<Company[]>('/companies');
-		companies.value = response.data;
+		// Szűrjük az aktív cégeket
+		companies.value = response.data.filter(c => c.isActive !== false);
 	} catch (err) {
 		console.error('Error loading companies:', err);
 	}
@@ -439,52 +467,67 @@ async function saveUser() {
 	}
 }
 
-function confirmDelete(user: UserDto) {
-	userToDelete.value = user;
-	showDeleteDialog.value = true;
+function confirmActivate(user: UserDto) {
+	userToActivate.value = user;
+	showActivateDialog.value = true;
 }
 
-function cancelDelete() {
-	showDeleteDialog.value = false;
-	userToDelete.value = null;
+function cancelActivate() {
+	showActivateDialog.value = false;
+	userToActivate.value = null;
 }
 
-async function handleDelete() {
-	if (!userToDelete.value) return;
+async function handleActivate() {
+	if (!userToActivate.value) return;
 
-	deleting.value = true;
+	activating.value = true;
 	try {
-		const response = await api.delete<UserDto>(`/admin/users/${userToDelete.value.id}`);
+		const response = await api.patch<UserDto>(`/admin/users/${userToActivate.value.id}/activate`);
 		
-		// Debug: log the response to see what we're getting
-		console.log('Delete response:', response.data);
-		console.log('Original isActive:', userToDelete.value.isActive);
-		
-		const index = users.value.findIndex(u => u.id === userToDelete.value!.id);
-		if (index !== -1) {
-			// Always use the response data - backend returns the updated user
-			if (response.data) {
-				users.value[index] = response.data;
-			} else {
-				// Fallback: if no response data, toggle manually
-				users.value[index].isActive = !users.value[index].isActive;
-			}
+		const index = users.value.findIndex(u => u.id === userToActivate.value!.id);
+		if (index !== -1 && response.data) {
+			users.value[index] = response.data;
 		}
 		
-		// Use the response data's isActive value (backend toggles it)
-		// If response.data exists, use its isActive, otherwise use the toggled value
-		const newStatus = response.data?.isActive !== undefined 
-			? response.data.isActive 
-			: !userToDelete.value.isActive;
-		
-		console.log('New status:', newStatus);
-		success(`Felhasználó sikeresen ${newStatus ? 'aktiválva' : 'deaktiválva'}`);
-		cancelDelete();
+		success('Felhasználó sikeresen aktiválva');
+		cancelActivate();
 	} catch (err: any) {
-		toastError(err.response?.data?.message || 'Hiba történt a törlés során');
-		console.error('Error deleting user:', err);
+		toastError(err.response?.data?.message || 'Hiba történt az aktiválás során');
+		console.error('Error activating user:', err);
 	} finally {
-		deleting.value = false;
+		activating.value = false;
+	}
+}
+
+function confirmDeactivate(user: UserDto) {
+	userToDeactivate.value = user;
+	showDeactivateDialog.value = true;
+}
+
+function cancelDeactivate() {
+	showDeactivateDialog.value = false;
+	userToDeactivate.value = null;
+}
+
+async function handleDeactivate() {
+	if (!userToDeactivate.value) return;
+
+	deactivating.value = true;
+	try {
+		const response = await api.patch<UserDto>(`/admin/users/${userToDeactivate.value.id}/deactivate`);
+		
+		const index = users.value.findIndex(u => u.id === userToDeactivate.value!.id);
+		if (index !== -1 && response.data) {
+			users.value[index] = response.data;
+		}
+		
+		success('Felhasználó sikeresen deaktiválva');
+		cancelDeactivate();
+	} catch (err: any) {
+		toastError(err.response?.data?.message || 'Hiba történt a deaktiválás során');
+		console.error('Error deactivating user:', err);
+	} finally {
+		deactivating.value = false;
 	}
 }
 
