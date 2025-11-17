@@ -427,13 +427,13 @@
 								Továbbküldés következő lépésre
 							</BaseButton>
 							<BaseButton
-								v-if="canWorkflowAction"
+								v-if="canStepBack"
 								variant="secondary"
-								@click="showRejectModal = true"
+								@click="handleStepBack"
 								:left-icon="['fas', 'arrow-left']"
 								class="w-full"
 							>
-								Visszaküldés előző lépésre
+								Visszaléptetés előző lépésre
 							</BaseButton>
 							<BaseButton
 								v-if="canDelegate"
@@ -462,7 +462,7 @@
 							>
 								Iktatás lezárása
 							</BaseButton>
-							<div v-if="!canWorkflowAction && !canDelegate && !canReject && !canFinalize" class="text-sm text-gray-500 text-center py-2">
+							<div v-if="!canWorkflowAction && !canStepBack && !canDelegate && !canReject && !canFinalize" class="text-sm text-gray-500 text-center py-2">
 								<p>Nincsenek elérhető műveletek</p>
 								<p class="text-xs mt-1">Státusz: {{ document?.status }}</p>
 							</div>
@@ -646,6 +646,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/authStore';
 import { useToast } from '@/composables/useToast';
+import { useWorkflow } from '@/composables/useWorkflow';
 import AppLayout from '@/components/layout/AppLayout.vue';
 import BaseCard from '@/components/base/BaseCard.vue';
 import BaseButton from '@/components/base/BaseButton.vue';
@@ -679,6 +680,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const { success, error: toastError } = useToast();
+const workflow = useWorkflow();
 
 const documentId = computed(() => parseInt(route.params.id as string));
 
@@ -773,26 +775,75 @@ const canEdit = computed(() => {
 	return false;
 });
 
-const canWorkflowAction = computed(() => {
-	if (!document.value) return false;
+// Helper function to check if user can perform workflow action
+function canPerformWorkflowAction(): boolean {
+	if (!document.value || !authStore.user) return false;
+	
+	const userRoles = authStore.userRoles;
 	const status = document.value.status;
-	return status === 'PendingApproval' || status === 'ElevatedApproval';
+	const assignedToUserId = document.value.assignedToUserId;
+	const createdByUserId = document.value.createdByUserId;
+	const currentUserId = authStore.user.id;
+	
+	// Admin can always perform actions
+	if (userRoles.includes('Admin')) {
+		return true;
+	}
+	
+	// Assigned user can perform actions (if assigned)
+	if (assignedToUserId === currentUserId) {
+		return true;
+	}
+	
+	// Creator can perform actions (only in Draft status)
+	if (createdByUserId === currentUserId && status === 'Draft') {
+		return true;
+	}
+	
+	// Role-based permissions by status
+	switch (status) {
+		case 'PendingApproval':
+			return userRoles.includes('Approver');
+		case 'ElevatedApproval':
+			return userRoles.includes('ElevatedApprover');
+		case 'Accountant':
+			return userRoles.includes('Accountant');
+		default:
+			return false;
+	}
+}
+
+const canWorkflowAction = computed(() => {
+	if (!canPerformWorkflowAction()) return false;
+	const status = document.value?.status;
+	// Can advance from: Draft, PendingApproval, ElevatedApproval, Accountant
+	return status === 'Draft' || status === 'PendingApproval' || status === 'ElevatedApproval' || status === 'Accountant';
+});
+
+const canStepBack = computed(() => {
+	if (!canPerformWorkflowAction()) return false;
+	const status = document.value?.status;
+	// Can step back from: PendingApproval, ElevatedApproval, Accountant
+	return status === 'PendingApproval' || status === 'ElevatedApproval' || status === 'Accountant';
 });
 
 const canDelegate = computed(() => {
+	if (!canPerformWorkflowAction()) return false;
 	if (!document.value) return false;
-	return document.value.assignedToUserId === authStore.user?.id;
+	// Only assigned user can delegate (or Admin)
+	return document.value.assignedToUserId === authStore.user?.id || authStore.userRoles.includes('Admin');
 });
 
 const canReject = computed(() => {
-	if (!document.value) return false;
-	const status = document.value.status;
-	return status === 'PendingApproval' || status === 'ElevatedApproval';
+	if (!canPerformWorkflowAction()) return false;
+	const status = document.value?.status;
+	// Can reject from: Draft, PendingApproval, ElevatedApproval, Accountant
+	return status === 'Draft' || status === 'PendingApproval' || status === 'ElevatedApproval' || status === 'Accountant';
 });
 
 const canFinalize = computed(() => {
-	if (!document.value) return false;
-	const status = document.value.status;
+	if (!canPerformWorkflowAction()) return false;
+	const status = document.value?.status;
 	return status === 'Accountant';
 });
 
@@ -1146,79 +1197,55 @@ async function fetchNavData() {
 	}
 }
 
-async function handleWorkflowAction(action: 'forward' | 'backward') {
-	if (action === 'forward') {
-		try {
-			const response = await api.post(`/documents/${documentId.value}/workflow/advance`, {});
-			if (response.data.success) {
-				success('Dokumentum továbbküldve');
-				await loadDocument(); // Reload to get updated status
-				await loadHistory();
-			} else {
-				toastError(response.data.message || 'Hiba történt a továbbküldés során');
-			}
-		} catch (err: any) {
-			console.error('Error advancing document:', err);
-			toastError(err.response?.data?.message || 'Hiba történt a továbbküldés során');
-		}
-	} else {
-		// Backward action - show modal for reason
-		showRejectModal.value = true;
+async function handleWorkflowAction(action: 'forward') {
+	try {
+		await workflow.advance(documentId.value);
+		await loadDocument(); // Reload to get updated status
+		await loadHistory();
+	} catch (err) {
+		// Error already handled in composable
+	}
+}
+
+async function handleStepBack() {
+	try {
+		await workflow.stepBack(documentId.value);
+		await loadDocument(); // Reload to get updated status
+		await loadHistory();
+	} catch (err) {
+		// Error already handled in composable
 	}
 }
 
 async function handleReject(reason: string) {
 	try {
-		const response = await api.post(`/documents/${documentId.value}/workflow/reject`, {
-			reason: reason
-		});
-		if (response.data.success) {
-			success('Dokumentum elutasítva');
-			showRejectModal.value = false;
-			await loadDocument(); // Reload to get updated status
-			await loadHistory();
-		} else {
-			toastError(response.data.message || 'Hiba történt az elutasítás során');
-		}
-	} catch (err: any) {
-		console.error('Error rejecting document:', err);
-		toastError(err.response?.data?.message || 'Hiba történt az elutasítás során');
+		await workflow.reject(documentId.value, { reason });
+		showRejectModal.value = false;
+		await loadDocument(); // Reload to get updated status
+		await loadHistory();
+	} catch (err) {
+		// Error already handled in composable
 	}
 }
 
 async function handleDelegate(userId: number) {
 	try {
-		const response = await api.post(`/documents/${documentId.value}/workflow/delegate`, {
-			targetUserId: userId
-		});
-		if (response.data.success) {
-			success('Dokumentum átadva');
-			showDelegateModal.value = false;
-			await loadDocument(); // Reload to get updated assignment
-			await loadHistory();
-		} else {
-			toastError(response.data.message || 'Hiba történt az átadás során');
-		}
-	} catch (err: any) {
-		console.error('Error delegating document:', err);
-		toastError(err.response?.data?.message || 'Hiba történt az átadás során');
+		await workflow.delegate(documentId.value, { targetUserId: userId });
+		showDelegateModal.value = false;
+		await loadDocument(); // Reload to get updated assignment
+		await loadHistory();
+	} catch (err) {
+		// Error already handled in composable
 	}
 }
 
 async function handleFinalize() {
-	// Finalization is done through advance when status is Accountant
 	try {
-		const response = await api.post(`/documents/${documentId.value}/workflow/advance`, {});
-		if (response.data.success) {
-			success('Iktatás lezárva');
-			await loadDocument(); // Reload to get updated status
-			await loadHistory();
-		} else {
-			toastError(response.data.message || 'Hiba történt a lezárás során');
-		}
-	} catch (err: any) {
-		console.error('Error finalizing document:', err);
-		toastError(err.response?.data?.message || 'Hiba történt a lezárás során');
+		await workflow.finalize(documentId.value);
+		await loadDocument(); // Reload to get updated status
+		await loadHistory();
+	} catch (err) {
+		// Error already handled in composable
 	}
 }
 

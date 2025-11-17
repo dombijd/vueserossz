@@ -160,6 +160,49 @@ namespace GlosterIktato.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Dokumentum visszaléptetése az előző státuszba
+        /// POST /api/documents/{id}/workflow/stepback
+        /// Body: { assignToUserId?: number, comment?: string }
+        /// </summary>
+        [HttpPost("stepback")]
+        [ProducesResponseType(typeof(WorkflowActionResultDto), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status403Forbidden)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> StepBackDocument(int documentId, [FromBody] WorkflowAdvanceDto dto)
+        {
+            var userId = GetCurrentUserId();
+            if (userId == 0)
+                return Unauthorized();
+
+            try
+            {
+                var result = await _workflowService.StepBackDocumentAsync(documentId, dto, userId);
+
+                if (!result.Success)
+                {
+                    _logger.LogWarning("Document {DocumentId} step back failed for user {UserId}: {Message}",
+                        documentId, userId, result.Message);
+                    return BadRequest(result);
+                }
+
+                _logger.LogInformation("Document {DocumentId} stepped back by user {UserId} to status {NewStatus}",
+                    documentId, userId, result.NewStatus);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error stepping back document {DocumentId}", documentId);
+                return StatusCode(500, new WorkflowActionResultDto
+                {
+                    Success = false,
+                    Message = "Hiba történt a dokumentum visszaléptetése során"
+                });
+            }
+        }
+
         // ============================================================
         // HELPER METHODS
         // ============================================================
