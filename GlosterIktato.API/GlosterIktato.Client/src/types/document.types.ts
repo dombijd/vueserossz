@@ -264,6 +264,11 @@ export interface DocumentDetailDto {
 	storagePath?: string;
 	customFields?: Record<string, any>;
 	history?: DocumentHistoryDto[];
+	// Dataxo integráció mezők
+	dataxoTransactionId?: string | null;
+	dataxoStatus?: string | null; // null, Processing, Success, Failed
+	dataxoSubmittedAt?: string | null;
+	dataxoCompletedAt?: string | null;
 }
 
 /**
