@@ -5,6 +5,9 @@ import DashboardPage from '@/components/features/DashboardPage.vue';
 import DocumentUploadPage from '@/components/features/DocumentUploadPage.vue';
 import DocumentsListPage from '@/components/features/DocumentsListPage.vue';
 import DocumentDetailPage from '@/components/features/DocumentDetailPage.vue';
+import SuppliersPage from '@/components/features/SuppliersPage.vue';
+import UsersPage from '@/components/features/admin/UsersPage.vue';
+import CompaniesPage from '@/components/features/admin/CompaniesPage.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
@@ -54,8 +57,8 @@ const router = createRouter({
 		{
 			path: '/suppliers',
 			name: 'suppliers',
-			component: () => import('@/components/features/SuppliersPage.vue'),
-			meta: { requiresAuth: true, title: 'Szállítók' }
+			component: SuppliersPage,
+			meta: { requiresAuth: true, title: 'Szállítók kezelése' }
 		},
 		// Settings
 		{
@@ -75,8 +78,14 @@ const router = createRouter({
 		{
 			path: '/admin/users',
 			name: 'admin-users',
-			component: LandingPage, // TODO: Replace with AdminUsersPage
-			meta: { requiresAuth: true, requiresAdmin: true }
+			component: UsersPage,
+			meta: { requiresAuth: true, requiresAdmin: true, title: 'Felhasználók kezelése' }
+		},
+		{
+			path: '/admin/companies',
+			name: 'admin-companies',
+			component: CompaniesPage,
+			meta: { requiresAuth: true, requiresAdmin: true, title: 'Cégek kezelése' }
 		},
 		{
 			path: '/admin/user-groups',
