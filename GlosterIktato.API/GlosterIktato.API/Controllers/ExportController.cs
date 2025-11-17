@@ -214,23 +214,34 @@ namespace GlosterIktato.API.Controllers
                         }
                     }
 
-                    if (allRelatedIds.Any())
+                    // Kiszűrjük azokat a kapcsolódó dokumentumokat, amelyek már benne vannak a kiválasztottak között
+                    // Így minden dokumentum csak egyszer szerepel a ZIP-ben
+                    var selectedDocumentIdsSet = new HashSet<int>(documentIds);
+                    var uniqueRelatedIds = allRelatedIds.Where(id => !selectedDocumentIdsSet.Contains(id)).ToList();
+
+                    if (uniqueRelatedIds.Any())
                     {
                         // Kapcsolódó dokumentumok lekérése (amikhez van hozzáférés)
                         var relatedDocuments = await _context.Documents
                             .Include(d => d.Company)
                             .Include(d => d.Supplier)
-                            .Where(d => allRelatedIds.Contains(d.Id) && userCompanyIds.Contains(d.CompanyId))
+                            .Where(d => uniqueRelatedIds.Contains(d.Id) && userCompanyIds.Contains(d.CompanyId))
                             .ToListAsync();
 
                         documents.AddRange(relatedDocuments);
 
-                        _logger.LogInformation("Added {RelatedCount} related documents to export for user {UserId}",
+                        _logger.LogInformation("Added {RelatedCount} unique related documents to export for user {UserId}",
                             relatedDocuments.Count, userId);
                     }
                 }
 
-                _logger.LogInformation("Exporting {Count} documents to PDF ZIP by user {UserId}", documents.Count, userId);
+                // Duplikátumok eltávolítása - minden dokumentum csak egyszer szerepeljen a ZIP-ben
+                var uniqueDocuments = documents
+                    .GroupBy(d => d.Id)
+                    .Select(g => g.First())
+                    .ToList();
+
+                _logger.LogInformation("Exporting {Count} unique documents to PDF ZIP by user {UserId}", uniqueDocuments.Count, userId);
 
                 // ZIP létrehozása
                 using var memoryStream = new MemoryStream();
@@ -239,7 +250,7 @@ namespace GlosterIktato.API.Controllers
                     int fileIndex = 1;
                     int addedFilesCount = 0;
 
-                    foreach (var doc in documents)
+                    foreach (var doc in uniqueDocuments)
                     {
                         try
                         {
