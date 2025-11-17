@@ -29,8 +29,21 @@ namespace GlosterIktato.API.Services.Interfaces
         Task<WorkflowActionResultDto> DelegateDocumentAsync(int documentId, WorkflowDelegateDto dto, int currentUserId);
 
         /// <summary>
+        /// Dokumentum visszaléptetése az előző státuszba
+        /// - Előző státusz meghatározása
+        /// - Auto-assign vagy manual assign
+        /// - History log
+        /// </summary>
+        Task<WorkflowActionResultDto> StepBackDocumentAsync(int documentId, WorkflowAdvanceDto dto, int currentUserId);
+
+        /// <summary>
         /// Következő státusz meghatározása értékhatár logikával
         /// </summary>
         Task<string> DetermineNextStatusAsync(int documentId, string currentStatus);
+
+        /// <summary>
+        /// Előző státusz meghatározása step back művelethez
+        /// </summary>
+        Task<string> DeterminePreviousStatusAsync(int documentId, string currentStatus);
     }
 }

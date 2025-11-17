@@ -27,10 +27,10 @@
             {
                 DocumentStatuses.Draft => "Vázlat",
                 DocumentStatuses.PendingApproval => "Jóváhagyásra vár",
-                DocumentStatuses.ElevatedApproval => "Emelt szintű jóváhagyásra vár",
+                DocumentStatuses.ElevatedApproval => "Emeltszintű jóváhagyásra vár",
                 DocumentStatuses.Accountant => "Könyvelőnél",
                 DocumentStatuses.Done => "Kész",
-                DocumentStatuses.Rejected => "Elutasítva",
+                DocumentStatuses.Rejected => "Elutasított",
                 _ => status
             };
         }
@@ -66,6 +66,16 @@
         public static bool CanDelegate(this string status)
         {
             return status != DocumentStatuses.Done && status != DocumentStatuses.Rejected;
+        }
+
+        /// <summary>
+        /// Lehet-e visszaléptetni
+        /// </summary>
+        public static bool CanStepBack(this string status)
+        {
+            return status == DocumentStatuses.PendingApproval 
+                || status == DocumentStatuses.ElevatedApproval 
+                || status == DocumentStatuses.Accountant;
         }
 
         /// <summary>
