@@ -14,7 +14,7 @@ namespace GlosterIktato.API.Data
                 {
                     new Company
                     {
-                        Name = "P92 Gloster Péksütemény Kft.",
+                        Name = "P92 Gloster IT Kft.",
                         TaxNumber = "12345678-2-41",
                         Address = "1011 Budapest, Fő utca 1.",
                         IsActive = true
@@ -82,7 +82,7 @@ namespace GlosterIktato.API.Data
                     },
                     new User
                     {
-                        Email = "jóváhagyó@gloster.hu",
+                        Email = "jovahagya@gloster.hu",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("jovahagyo123"),
                         FirstName = "Jóváhagyós",
                         LastName = "Katalin",
@@ -98,7 +98,7 @@ namespace GlosterIktato.API.Data
                     },
                     new User
                     {
-                        Email = "konyvelő@gloster.hu",
+                        Email = "konyvelo@gloster.hu",
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword("konyvelo123"),
                         FirstName = "Könyvelős",
                         LastName = "Anna",
@@ -120,9 +120,9 @@ namespace GlosterIktato.API.Data
                 // 3.1 USER ↔ COMPANY HOZZÁRENDELÉSEK
                 var admin = await context.Users.FirstAsync(u => u.Email == "admin@gloster.hu");
                 var iktato = await context.Users.FirstAsync(u => u.Email == "iktato@gloster.hu");
-                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jóváhagyó@gloster.hu");
+                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jovahagyo@gloster.hu");
                 var vezeto = await context.Users.FirstAsync(u => u.Email == "vezeto@gloster.hu");
-                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelő@gloster.hu");
+                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelo@gloster.hu");
                 var asszisztens = await context.Users.FirstAsync(u => u.Email == "asszisztens@gloster.hu");
 
                 var userCompanies = new List<UserCompany>
@@ -202,9 +202,9 @@ namespace GlosterIktato.API.Data
                 var company3 = await context.Companies.FirstAsync(c => c.Name.Contains("P94"));
 
                 var admin = await context.Users.FirstAsync(u => u.Email == "admin@gloster.hu");
-                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jóváhagyó@gloster.hu");
+                var jovahagyo = await context.Users.FirstAsync(u => u.Email == "jovahagyo@gloster.hu");
                 var vezeto = await context.Users.FirstAsync(u => u.Email == "vezeto@gloster.hu");
-                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelő@gloster.hu");
+                var konyvelő = await context.Users.FirstAsync(u => u.Email == "konyvelo@gloster.hu");
                 var asszisztens = await context.Users.FirstAsync(u => u.Email == "asszisztens@gloster.hu");
 
                 var userGroups = new List<UserGroup>
@@ -213,7 +213,7 @@ namespace GlosterIktato.API.Data
                     new UserGroup
                     {
                         Name = "P92 Finance Approvers",
-                        Description = "Pénzügyi jóváhagyók - P92 Péksütemény",
+                        Description = "Pénzügyi jóváhagyók - P92 IT",
                         GroupType = "Approver",
                         CompanyId = company1.Id,
                         IsActive = true,
@@ -224,7 +224,7 @@ namespace GlosterIktato.API.Data
                     new UserGroup
                     {
                         Name = "P92 Senior Approvers",
-                        Description = "Felső szintű jóváhagyók - P92 Péksütemény",
+                        Description = "Felső szintű jóváhagyók - P92 IT",
                         GroupType = "ElevatedApprover",
                         CompanyId = company1.Id,
                         IsActive = true,
@@ -235,7 +235,7 @@ namespace GlosterIktato.API.Data
                     new UserGroup
                     {
                         Name = "P92 Accounting Team",
-                        Description = "Könyvelési csapat - P92 Péksütemény",
+                        Description = "Könyvelési csapat - P92 IT",
                         GroupType = "Accountant",
                         CompanyId = company1.Id,
                         IsActive = true,
