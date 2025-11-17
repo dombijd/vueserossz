@@ -50,17 +50,6 @@ namespace GlosterIktato.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Companies");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Address = "Budapest, Példa utca 1.",
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            IsActive = true,
-                            Name = "Gloster Kft.",
-                            TaxNumber = "12345678-1-23"
-                        });
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.Document", b =>
@@ -71,47 +60,94 @@ namespace GlosterIktato.API.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<int?>("AssignedToId")
-                        .HasColumnType("int");
+                    b.Property<string>("ArchiveNumber")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
 
                     b.Property<int?>("AssignedToUserId")
                         .HasColumnType("int");
 
+                    b.Property<string>("BcInvoiceId")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("BcPushedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("BcStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("BusinessUnit")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("CompanyId")
                         .HasColumnType("int");
+
+                    b.Property<string>("CostCenter")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("CreatedById")
-                        .HasColumnType("int");
-
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
+
+                    b.Property<string>("Currency")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DataxoCompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DataxoStatus")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("DataxoSubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("DataxoTransactionId")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("DocumentTypeId")
                         .HasColumnType("int");
 
-                    b.Property<string>("FileName")
-                        .IsRequired()
+                    b.Property<string>("Employee")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("FilePath")
-                        .IsRequired()
+                    b.Property<string>("GptCode")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal?>("GrossAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("InvoiceNumber")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("IssueDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("ModifiedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<int?>("ModifiedByUserId")
+                        .HasColumnType("int");
 
                     b.Property<string>("OriginalFileName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("RegistrationNumber")
-                        .IsRequired()
+                    b.Property<DateTime?>("PaymentDeadline")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("PerformanceDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Project")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("StoragePath")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -120,17 +156,138 @@ namespace GlosterIktato.API.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("AssignedToId");
+                    b.HasIndex("ArchiveNumber")
+                        .IsUnique();
 
-                    b.HasIndex("CompanyId");
+                    b.HasIndex("AssignedToUserId");
 
-                    b.HasIndex("CreatedById");
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("DocumentTypeId");
 
+                    b.HasIndex("ModifiedByUserId");
+
+                    b.HasIndex("Status");
+
                     b.HasIndex("SupplierId");
 
+                    b.HasIndex("CompanyId", "DocumentTypeId", "CreatedAt");
+
                     b.ToTable("Documents");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.DocumentComment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("DocumentId", "CreatedAt");
+
+                    b.ToTable("DocumentComments");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.DocumentHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("FieldName")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NewValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("DocumentId", "CreatedAt");
+
+                    b.ToTable("DocumentHistories");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.DocumentRelation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Comment")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RelatedDocumentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RelationType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("RelatedDocumentId");
+
+                    b.HasIndex("DocumentId", "RelatedDocumentId")
+                        .IsUnique();
+
+                    b.ToTable("DocumentRelations");
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.DocumentType", b =>
@@ -155,36 +312,6 @@ namespace GlosterIktato.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("DocumentTypes");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Code = "SZLA",
-                            IsActive = true,
-                            Name = "Számla"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Code = "TIG",
-                            IsActive = true,
-                            Name = "Teljesítés Igazolás"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Code = "SZ",
-                            IsActive = true,
-                            Name = "Szerződés"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Code = "E",
-                            IsActive = true,
-                            Name = "Egyéb"
-                        });
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.Role", b =>
@@ -206,20 +333,6 @@ namespace GlosterIktato.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Roles");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Description = "Rendszergazda",
-                            Name = "Admin"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Description = "Felhasználó",
-                            Name = "User"
-                        });
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.Supplier", b =>
@@ -258,26 +371,6 @@ namespace GlosterIktato.API.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Suppliers");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "info@teszt.hu",
-                            IsActive = true,
-                            Name = "Teszt Szállító Kft.",
-                            TaxNumber = "98765432-1-23"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "info@masik.hu",
-                            IsActive = true,
-                            Name = "Másik Szállító Zrt.",
-                            TaxNumber = "11223344-2-44"
-                        });
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.User", b =>
@@ -287,9 +380,6 @@ namespace GlosterIktato.API.Migrations
                         .HasColumnType("int");
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int?>("CompanyId")
-                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -318,22 +408,121 @@ namespace GlosterIktato.API.Migrations
 
                     b.HasKey("Id");
 
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.UserCompany", b =>
+                {
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("UserId", "CompanyId");
+
                     b.HasIndex("CompanyId");
 
-                    b.ToTable("Users");
+                    b.ToTable("UserCompanies");
+                });
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            CompanyId = 1,
-                            CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Email = "admin@gloster.hu",
-                            FirstName = "Admin",
-                            IsActive = true,
-                            LastName = "User",
-                            PasswordHash = "$2a$11$K5PqYx7qHqF5qF5qF5qF5uXQYx7qHqF5qF5qF5qF5qF5qF5qF5qF5"
-                        });
+            modelBuilder.Entity("GlosterIktato.API.Models.UserGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("GroupType")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RoundRobinIndex")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("GroupType");
+
+                    b.HasIndex("CompanyId", "Name")
+                        .IsUnique();
+
+                    b.HasIndex("CompanyId", "GroupType", "IsActive");
+
+                    b.ToTable("UserGroups");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.UserGroupMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AddedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RoleInGroup")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("UserGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AddedByUserId");
+
+                    b.HasIndex("UserGroupId");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("UserGroupId", "IsActive");
+
+                    b.HasIndex("UserGroupId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("UserGroupMembers");
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.UserRole", b =>
@@ -349,20 +538,14 @@ namespace GlosterIktato.API.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("UserRoles");
-
-                    b.HasData(
-                        new
-                        {
-                            UserId = 1,
-                            RoleId = 1
-                        });
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.Document", b =>
                 {
                     b.HasOne("GlosterIktato.API.Models.User", "AssignedTo")
                         .WithMany()
-                        .HasForeignKey("AssignedToId");
+                        .HasForeignKey("AssignedToUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GlosterIktato.API.Models.Company", "Company")
                         .WithMany("Documents")
@@ -372,8 +555,8 @@ namespace GlosterIktato.API.Migrations
 
                     b.HasOne("GlosterIktato.API.Models.User", "CreatedBy")
                         .WithMany()
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("GlosterIktato.API.Models.DocumentType", "DocumentType")
@@ -381,6 +564,11 @@ namespace GlosterIktato.API.Migrations
                         .HasForeignKey("DocumentTypeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("GlosterIktato.API.Models.User", "ModifiedBy")
+                        .WithMany()
+                        .HasForeignKey("ModifiedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("GlosterIktato.API.Models.Supplier", "Supplier")
                         .WithMany("Documents")
@@ -394,16 +582,130 @@ namespace GlosterIktato.API.Migrations
 
                     b.Navigation("DocumentType");
 
+                    b.Navigation("ModifiedBy");
+
                     b.Navigation("Supplier");
                 });
 
-            modelBuilder.Entity("GlosterIktato.API.Models.User", b =>
+            modelBuilder.Entity("GlosterIktato.API.Models.DocumentComment", b =>
+                {
+                    b.HasOne("GlosterIktato.API.Models.Document", "Document")
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GlosterIktato.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.DocumentHistory", b =>
+                {
+                    b.HasOne("GlosterIktato.API.Models.Document", "Document")
+                        .WithMany("History")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GlosterIktato.API.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Document");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.DocumentRelation", b =>
+                {
+                    b.HasOne("GlosterIktato.API.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GlosterIktato.API.Models.Document", "Document")
+                        .WithMany("DocumentRelations")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("GlosterIktato.API.Models.Document", "RelatedDocument")
+                        .WithMany("RelatedToDocuments")
+                        .HasForeignKey("RelatedDocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Document");
+
+                    b.Navigation("RelatedDocument");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.UserCompany", b =>
                 {
                     b.HasOne("GlosterIktato.API.Models.Company", "Company")
-                        .WithMany("Users")
-                        .HasForeignKey("CompanyId");
+                        .WithMany("UserCompanies")
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GlosterIktato.API.Models.User", "User")
+                        .WithMany("UserCompanies")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Company");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.UserGroup", b =>
+                {
+                    b.HasOne("GlosterIktato.API.Models.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.UserGroupMember", b =>
+                {
+                    b.HasOne("GlosterIktato.API.Models.User", "AddedBy")
+                        .WithMany()
+                        .HasForeignKey("AddedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("GlosterIktato.API.Models.UserGroup", "UserGroup")
+                        .WithMany("Members")
+                        .HasForeignKey("UserGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("GlosterIktato.API.Models.User", "User")
+                        .WithMany("GroupMemberships")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("AddedBy");
+
+                    b.Navigation("User");
+
+                    b.Navigation("UserGroup");
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.UserRole", b =>
@@ -429,7 +731,16 @@ namespace GlosterIktato.API.Migrations
                 {
                     b.Navigation("Documents");
 
-                    b.Navigation("Users");
+                    b.Navigation("UserCompanies");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.Document", b =>
+                {
+                    b.Navigation("DocumentRelations");
+
+                    b.Navigation("History");
+
+                    b.Navigation("RelatedToDocuments");
                 });
 
             modelBuilder.Entity("GlosterIktato.API.Models.DocumentType", b =>
@@ -449,7 +760,16 @@ namespace GlosterIktato.API.Migrations
 
             modelBuilder.Entity("GlosterIktato.API.Models.User", b =>
                 {
+                    b.Navigation("GroupMemberships");
+
+                    b.Navigation("UserCompanies");
+
                     b.Navigation("UserRoles");
+                });
+
+            modelBuilder.Entity("GlosterIktato.API.Models.UserGroup", b =>
+                {
+                    b.Navigation("Members");
                 });
 #pragma warning restore 612, 618
         }

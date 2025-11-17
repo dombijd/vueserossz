@@ -1,6 +1,4 @@
-﻿using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
-
-namespace GlosterIktato.API.Models
+﻿namespace GlosterIktato.API.Models
 {
     public class User
     {
@@ -13,8 +11,9 @@ namespace GlosterIktato.API.Models
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime? LastLoginAt { get; set; }
 
-        public int? CompanyId { get; set; }
-        public Company? Company { get; set; }
+        // Many-to-many kapcsolat a cégekkel
+        public ICollection<UserCompany> UserCompanies { get; set; } = new List<UserCompany>();
         public ICollection<UserRole> UserRoles { get; set; } = new List<UserRole>();
+        public ICollection<UserGroupMember> GroupMemberships { get; set; } = new List<UserGroupMember>();
     }
 }

@@ -15,14 +15,20 @@ namespace GlosterIktato.API.Data
         public DbSet<Supplier> Suppliers { get; set; }
         public DbSet<DocumentType> DocumentTypes { get; set; }
         public DbSet<Document> Documents { get; set; }
+        public DbSet<DocumentHistory> DocumentHistories { get; set; }
+        public DbSet<DocumentComment> DocumentComments { get; set; }
         public DbSet<Role> Roles { get; set; }
         public DbSet<UserRole> UserRoles { get; set; }
+        public DbSet<UserCompany> UserCompanies { get; set; }
+        public DbSet<DocumentRelation> DocumentRelations { get; set; }
+        public DbSet<UserGroup> UserGroups { get; set; }
+        public DbSet<UserGroupMember> UserGroupMembers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // UserRole many-to-many konfiguráció
+            // UserRole many-to-many
             modelBuilder.Entity<UserRole>()
                 .HasKey(ur => new { ur.UserId, ur.RoleId });
 
@@ -36,80 +42,184 @@ namespace GlosterIktato.API.Data
                 .WithMany(r => r.UserRoles)
                 .HasForeignKey(ur => ur.RoleId);
 
-            // Seed data
-            SeedData(modelBuilder);
-        }
+            // UserCompany many-to-many
+            modelBuilder.Entity<UserCompany>()
+                .HasKey(uc => new { uc.UserId, uc.CompanyId });
 
-        private void SeedData(ModelBuilder modelBuilder)
-        {
-            // Szerepkörök
-            modelBuilder.Entity<Role>().HasData(
-                new Role { Id = 1, Name = "Admin", Description = "Rendszergazda" },
-                new Role { Id = 2, Name = "User", Description = "Felhasználó" }
-            );
+            modelBuilder.Entity<UserCompany>()
+                .HasOne(uc => uc.User)
+                .WithMany(u => u.UserCompanies)
+                .HasForeignKey(uc => uc.UserId);
 
-            // Cég
-            modelBuilder.Entity<Company>().HasData(
-                new Company
-                {
-                    Id = 1,
-                    Name = "Gloster Kft.",
-                    TaxNumber = "12345678-1-23",
-                    Address = "Budapest, Példa utca 1.",
-                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-                }
-            );
+            modelBuilder.Entity<UserCompany>()
+                .HasOne(uc => uc.Company)
+                .WithMany(c => c.UserCompanies)
+                .HasForeignKey(uc => uc.CompanyId);
 
-            // Admin user - jelszó: Admin123!
-            // BCrypt hash generálása: BCrypt.Net.BCrypt.HashPassword("Admin123!")
-            modelBuilder.Entity<User>().HasData(
-                new User
-                {
-                    Id = 1,
-                    Email = "admin@gloster.hu",
-                    PasswordHash = "$2a$11$K5PqYx7qHqF5qF5qF5qF5uXQYx7qHqF5qF5qF5qF5qF5qF5qF5qF5",
-                    FirstName = "Admin",
-                    LastName = "User",
-                    CompanyId = 1,
-                    IsActive = true,
-                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-                }
-            );
+            modelBuilder.Entity<Document>()
+                .HasOne(d => d.CreatedBy)
+                .WithMany()
+                .HasForeignKey(d => d.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict); // Cascade delete tiltása
 
-            // Admin role
-            modelBuilder.Entity<UserRole>().HasData(
-                new UserRole { UserId = 1, RoleId = 1 }
-            );
+            modelBuilder.Entity<Document>()
+                .HasOne(d => d.AssignedTo)
+                .WithMany()
+                .HasForeignKey(d => d.AssignedToUserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Dokumentum típusok
-            modelBuilder.Entity<DocumentType>().HasData(
-                new DocumentType { Id = 1, Name = "Számla", Code = "SZLA", IsActive = true },
-                new DocumentType { Id = 2, Name = "Teljesítés Igazolás", Code = "TIG", IsActive = true },
-                new DocumentType { Id = 3, Name = "Szerződés", Code = "SZ", IsActive = true },
-                new DocumentType { Id = 4, Name = "Egyéb", Code = "E", IsActive = true }
-            );
+            modelBuilder.Entity<Document>()
+                .HasOne(d => d.ModifiedBy)
+                .WithMany()
+                .HasForeignKey(d => d.ModifiedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
 
-            // Szállítók
-            modelBuilder.Entity<Supplier>().HasData(
-                new Supplier
-                {
-                    Id = 1,
-                    Name = "Teszt Szállító Kft.",
-                    TaxNumber = "98765432-1-23",
-                    Email = "info@teszt.hu",
-                    IsActive = true,
-                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-                },
-                new Supplier
-                {
-                    Id = 2,
-                    Name = "Másik Szállító Zrt.",
-                    TaxNumber = "11223344-2-44",
-                    Email = "info@masik.hu",
-                    IsActive = true,
-                    CreatedAt = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc)
-                }
-            );
+            modelBuilder.Entity<DocumentHistory>()
+                .HasOne(dh => dh.Document)
+                .WithMany(d => d.History)
+                .HasForeignKey(dh => dh.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade); // Ha Document törlődik, History is
+
+            modelBuilder.Entity<DocumentHistory>()
+                .HasOne(dh => dh.User)
+                .WithMany()
+                .HasForeignKey(dh => dh.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<DocumentComment>()
+                .HasOne(dc => dc.Document)
+                .WithMany()
+                .HasForeignKey(dc => dc.DocumentId)
+                .OnDelete(DeleteBehavior.Cascade); // Document törléskor Comments is törlődik
+
+            modelBuilder.Entity<DocumentComment>()
+                .HasOne(dc => dc.User)
+                .WithMany()
+                .HasForeignKey(dc => dc.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // DocumentRelation konfiguráció
+            modelBuilder.Entity<DocumentRelation>(entity =>
+            {
+                // Primary key
+                entity.HasKey(dr => dr.Id);
+
+                // DocumentId -> Document kapcsolat
+                entity.HasOne(dr => dr.Document)
+                    .WithMany(d => d.DocumentRelations)
+                    .HasForeignKey(dr => dr.DocumentId)
+                    .OnDelete(DeleteBehavior.Restrict); // Ne törölje a kapcsolatot ha a dokumentumot törlik
+
+                // RelatedDocumentId -> Document kapcsolat
+                entity.HasOne(dr => dr.RelatedDocument)
+                    .WithMany(d => d.RelatedToDocuments)
+                    .HasForeignKey(dr => dr.RelatedDocumentId)
+                    .OnDelete(DeleteBehavior.Restrict); // Ne törölje a kapcsolatot ha a dokumentumot törlik
+
+                // CreatedBy kapcsolat
+                entity.HasOne(dr => dr.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(dr => dr.CreatedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Index a gyorsabb kereséshez
+                entity.HasIndex(dr => dr.DocumentId);
+                entity.HasIndex(dr => dr.RelatedDocumentId);
+
+                // Unique constraint - ugyanaz a kapcsolat ne létezzen kétszer
+                entity.HasIndex(dr => new { dr.DocumentId, dr.RelatedDocumentId })
+                    .IsUnique();
+            });
+
+            modelBuilder.Entity<UserGroup>(entity =>
+            {
+                entity.HasKey(ug => ug.Id);
+
+                entity.Property(ug => ug.Name)
+                    .IsRequired()
+                    .HasMaxLength(100);
+
+                entity.Property(ug => ug.Description)
+                    .HasMaxLength(500);
+
+                entity.Property(ug => ug.GroupType)
+                    .HasMaxLength(50);
+
+                // Company kapcsolat
+                entity.HasOne(ug => ug.Company)
+                    .WithMany()
+                    .HasForeignKey(ug => ug.CompanyId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // Index-ek a gyorsabb kereséshez
+                entity.HasIndex(ug => ug.CompanyId);
+                entity.HasIndex(ug => ug.GroupType);
+                entity.HasIndex(ug => new { ug.CompanyId, ug.GroupType, ug.IsActive });
+
+                // Unique constraint - ugyanaz a név ne létezzen kétszer egy cégnél
+                entity.HasIndex(ug => new { ug.CompanyId, ug.Name })
+                    .IsUnique();
+            });
+
+            // ============================================================
+            // USER GROUP MEMBER KONFIGURÁCIÓ
+            // ============================================================
+
+            modelBuilder.Entity<UserGroupMember>(entity =>
+            {
+                entity.HasKey(ugm => ugm.Id);
+
+                // UserGroup kapcsolat
+                entity.HasOne(ugm => ugm.UserGroup)
+                    .WithMany(ug => ug.Members)
+                    .HasForeignKey(ugm => ugm.UserGroupId)
+                    .OnDelete(DeleteBehavior.Cascade); // Ha csoport törlődik, tagság is törlődik
+
+                // User kapcsolat
+                entity.HasOne(ugm => ugm.User)
+                    .WithMany(u => u.GroupMemberships)
+                    .HasForeignKey(ugm => ugm.UserId)
+                    .OnDelete(DeleteBehavior.Cascade); // Ha user törlődik, tagság is törlődik
+
+                // AddedBy kapcsolat
+                entity.HasOne(ugm => ugm.AddedBy)
+                    .WithMany()
+                    .HasForeignKey(ugm => ugm.AddedByUserId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.Property(ugm => ugm.RoleInGroup)
+                    .HasMaxLength(50);
+
+                // Index-ek
+                entity.HasIndex(ugm => ugm.UserGroupId);
+                entity.HasIndex(ugm => ugm.UserId);
+                entity.HasIndex(ugm => new { ugm.UserGroupId, ugm.IsActive });
+
+                // Unique constraint - egy user csak egyszer lehet tagja egy csoportnak
+                entity.HasIndex(ugm => new { ugm.UserGroupId, ugm.UserId })
+                    .IsUnique();
+            });
+
+        // INDEXEK (Performance optimalizálás)
+
+        modelBuilder.Entity<Document>()
+                .HasIndex(d => d.ArchiveNumber)
+                .IsUnique(); // Iktatószám egyedi kell legyen
+
+            modelBuilder.Entity<Document>()
+                .HasIndex(d => d.Status);
+
+            modelBuilder.Entity<Document>()
+                .HasIndex(d => d.CreatedAt);
+
+            modelBuilder.Entity<Document>()
+                .HasIndex(d => new { d.CompanyId, d.DocumentTypeId, d.CreatedAt });
+
+            modelBuilder.Entity<DocumentHistory>()
+                .HasIndex(dh => new { dh.DocumentId, dh.CreatedAt });
+
+            modelBuilder.Entity<DocumentComment>()
+                .HasIndex(dc => new { dc.DocumentId, dc.CreatedAt });
         }
     }
 }
