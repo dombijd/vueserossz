@@ -117,8 +117,9 @@
 							v-model="searchForm.assignedToUserId"
 							:options="userOptions"
 							label="Hozzárendelt felhasználó"
-							placeholder="Összes felhasználó"
+							:placeholder="searchForm.companyId ? 'Összes felhasználó' : 'Először válasszon céget'"
 							:loading="loadingUsers"
+							:disabled="!searchForm.companyId"
 						/>
 					</div>
 
@@ -275,7 +276,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import AppLayout from '../layout/AppLayout.vue';
 import BaseCard from '../base/BaseCard.vue';
@@ -286,8 +287,9 @@ import BaseSelect from '../base/BaseSelect.vue';
 import DateRangePicker from '../base/DateRangePicker.vue';
 import StatusBadge from '../base/StatusBadge.vue';
 import { useToast } from '@/composables/useToast';
-import api from '@/services/api';
 import { exportToExcel, exportToPdfZip } from '@/services/exportService';
+import { getMyCompanies, getDocumentTypes, getUsersByCompany } from '@/services/dataService';
+import { searchDocuments, type DocumentSearchParams } from '@/services/searchService';
 import type { DocumentResponseDto, PaginatedResult } from '@/types/document.types';
 import { formatDateTime } from '@/utils/date.utils';
 import { formatCurrency } from '@/utils/currency.utils';
@@ -332,6 +334,7 @@ const companyOptions = ref<Array<{ label: string; value: number }>>([]);
 const documentTypeOptions = ref<Array<{ label: string; value: number }>>([]);
 const userOptions = ref<Array<{ label: string; value: number }>>([]);
 
+// Státuszok (konstansok, nem adatbázisból)
 const statusOptions = [
 	{ label: 'Vázlat', value: 'Draft' },
 	{ label: 'Jóváhagyásra vár', value: 'PendingApproval' },
@@ -359,14 +362,15 @@ async function performSearch() {
 	hasSearched.value = true;
 
 	try {
-		const params = buildSearchParams();
-		const response = await api.get<PaginatedResult<DocumentResponseDto>>(
-			'/documents/search',
-			{ params }
-		);
+		const searchParams: DocumentSearchParams = {
+			...searchForm.value,
+			page: 1,
+			pageSize: 20
+		};
 
-		searchResults.value = response.data.data || [];
-		searchPagination.value = response.data;
+		const result = await searchDocuments(searchParams);
+		searchResults.value = result.data || [];
+		searchPagination.value = result;
 	} catch (err) {
 		toastError('Hiba történt a keresés során');
 		console.error('Search error:', err);
@@ -374,18 +378,6 @@ async function performSearch() {
 	} finally {
 		isSearching.value = false;
 	}
-}
-
-function buildSearchParams() {
-	const params: any = { page: 1, pageSize: 20 };
-
-	Object.entries(searchForm.value).forEach(([key, value]) => {
-		if (value !== null && value !== '' && !(Array.isArray(value) && value.length === 0)) {
-			params[key] = value;
-		}
-	});
-
-	return params;
 }
 
 function resetForm() {
@@ -491,9 +483,73 @@ async function exportSelectedToPdfZip() {
 	}
 }
 
+// Load data functions (component-specific logic only)
+async function loadCompanies() {
+	try {
+		const companies = await getMyCompanies();
+		companyOptions.value = companies.map(c => ({
+			label: c.name,
+			value: c.id
+		}));
+		
+		// Ha csak egy cég van, automatikusan kiválasztjuk (UI logic)
+		if (companyOptions.value.length === 1) {
+			searchForm.value.companyId = companyOptions.value[0].value;
+		}
+	} catch (err) {
+		console.error('Error loading companies:', err);
+		toastError('Nem sikerült betölteni a cégeket');
+	}
+}
+
+async function loadDocumentTypes() {
+	try {
+		const documentTypes = await getDocumentTypes();
+		documentTypeOptions.value = documentTypes.map(dt => ({
+			label: dt.name,
+			value: dt.id
+		}));
+	} catch (err) {
+		console.error('Error loading document types:', err);
+		toastError('Nem sikerült betölteni a dokumentum típusokat');
+	}
+}
+
+async function loadUsers(companyId: number) {
+	if (!companyId) {
+		userOptions.value = [];
+		return;
+	}
+
+	loadingUsers.value = true;
+	try {
+		const users = await getUsersByCompany(companyId);
+		userOptions.value = users.map(u => ({
+			label: `${u.firstName} ${u.lastName} (${u.email})`,
+			value: u.id
+		}));
+	} catch (err) {
+		console.error('Error loading users:', err);
+		toastError('Nem sikerült betölteni a felhasználókat');
+	} finally {
+		loadingUsers.value = false;
+	}
+}
+
+// Watch company selection to load users
+watch(() => searchForm.value.companyId, (newCompanyId) => {
+	if (newCompanyId) {
+		loadUsers(newCompanyId);
+	} else {
+		userOptions.value = [];
+	}
+});
+
 // Load options on mount
 onMounted(async () => {
-	// TODO: Load companies, document types, users from API
-	// For now, leaving empty arrays
+	await Promise.all([
+		loadCompanies(),
+		loadDocumentTypes()
+	]);
 });
 </script>
