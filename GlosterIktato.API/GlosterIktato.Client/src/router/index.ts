@@ -8,6 +8,7 @@ import DocumentDetailPage from '@/components/features/DocumentDetailPage.vue';
 import SuppliersPage from '@/components/features/SuppliersPage.vue';
 import UsersPage from '@/components/features/admin/UsersPage.vue';
 import CompaniesPage from '@/components/features/admin/CompaniesPage.vue';
+import UserGroupsPage from '@/components/features/admin/UserGroupsPage.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
@@ -64,7 +65,7 @@ const router = createRouter({
 		{
 			path: '/settings',
 			name: 'settings',
-			component: LandingPage, // TODO: Replace with SettingsPage
+			component: DashboardPage, // TODO: Replace with SettingsPage
 			meta: { requiresAuth: true }
 		},
 		// Profile
@@ -90,8 +91,8 @@ const router = createRouter({
 		{
 			path: '/admin/user-groups',
 			name: 'admin-user-groups',
-			component: LandingPage, // TODO: Replace with AdminUserGroupsPage
-			meta: { requiresAuth: true, requiresAdmin: true }
+			component: UserGroupsPage,
+			meta: { requiresAuth: true, requiresAdmin: true, title: 'Felhasználói Csoportok kezelése' }
 		},
 		// 404
 		{
@@ -140,7 +141,7 @@ router.beforeEach((to, from, next) => {
 
 router.afterEach((to) => {
 	// Update page title
-	document.title = `${to.meta?.title || 'Dashboard'} | Iktatórendszer`;
+	document.title = `${to.meta?.title || 'Összefoglaló'} | Gloster Iktatórendszer`;
 });
 
 export default router;

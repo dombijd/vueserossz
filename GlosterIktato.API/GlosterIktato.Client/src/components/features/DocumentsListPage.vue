@@ -192,7 +192,7 @@ const statusTabs: Tab[] = [
 	{ value: 'all', label: 'Összes', icon: ['fas', 'list'] },
 	{ value: 'Draft', label: 'Vázlat', icon: ['fas', 'file'] },
 	{ value: 'PendingApproval', label: 'Jóváhagyásra vár', icon: ['fas', 'clock'] },
-	// { value: 'Done', label: 'Kész', icon: ['fas', 'check-circle'] },
+	{ value: 'Done', label: 'Kész', icon: ['fas', 'check-circle'] },
 ];
 
 // Computed
