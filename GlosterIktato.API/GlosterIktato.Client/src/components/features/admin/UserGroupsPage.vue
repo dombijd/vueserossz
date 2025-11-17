@@ -29,8 +29,8 @@
 					<BaseSelect
 						v-model="filterGroupType"
 						:options="groupTypeOptions"
-						placeholder="Összes típus"
-						label="Típus"
+						placeholder="Összes szerepkör"
+						label="Szerepkör"
 					/>
 				</div>
 			</BaseCard>
@@ -50,7 +50,7 @@
 							v-if="row.groupType"
 							class="px-2 py-1 text-xs rounded-full bg-purple-100 text-purple-800"
 						>
-							{{ row.groupType }}
+							{{ getGroupTypeLabel(row.groupType) }}
 						</span>
 						<span v-else class="text-sm text-gray-400">-</span>
 					</template>
@@ -124,8 +124,8 @@
 				<BaseSelect
 					v-model="groupForm.groupType"
 					:options="groupTypeOptions"
-					label="Típus"
-					placeholder="Válasszon típust..."
+					label="Szerepkör"
+					placeholder="Válasszon szerepkört..."
 				/>
 				<BaseSelect
 					v-model="groupForm.companyId"
@@ -405,13 +405,28 @@ const memberForm = ref<AddUserGroupMemberDto>({
 
 const errors = ref<Record<string, string>>({});
 
+// Helper function
+function getGroupTypeLabel(type: string | null | undefined): string {
+	const labels: Record<string, string> = {
+		'Approver': 'Jóváhagyó',
+		'ElevatedApprover': 'Emelt szintű jóváhagyó',
+		'Accountant': 'Könyvelő',
+		'Manager': 'Vezető',
+		'Admin': 'Admin',
+		'Custom': 'Egyedi'
+	};
+	return type ? (labels[type] || type) : '-';
+}
+
 // Options
 const groupTypeOptions = [
-	{ label: 'Összes típus', value: null },
-	{ label: 'Approver', value: 'Approver' },
-	{ label: 'ElevatedApprover', value: 'ElevatedApprover' },
-	{ label: 'Accountant', value: 'Accountant' },
-	{ label: 'Manager', value: 'Manager' }
+	{ label: 'Összes szerepkör', value: null },
+	{ label: 'Jóváhagyó', value: 'Approver' },
+	{ label: 'Emelt szintű jóváhagyó', value: 'ElevatedApprover' },
+	{ label: 'Könyvelő', value: 'Accountant' },
+	{ label: 'Vezető', value: 'Manager' },
+	{ label: 'Admin', value: 'Admin' },
+	{ label: 'Egyedi', value: 'Custom' }
 ];
 
 const companyOptions = computed(() => {
@@ -433,7 +448,7 @@ const availableUserOptions = computed(() => {
 const columns: TableColumn[] = [
 	{ key: 'name', label: 'Név' },
 	{ key: 'description', label: 'Leírás' },
-	{ key: 'groupType', label: 'Típus' },
+	{ key: 'groupType', label: 'Szerepkör' },
 	{ key: 'companyName', label: 'Cég' },
 	{ key: 'memberCount', label: 'Tagok száma' },
 	{ key: 'isActive', label: 'Státusz' },
