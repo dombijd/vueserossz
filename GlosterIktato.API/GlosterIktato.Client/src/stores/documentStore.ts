@@ -80,12 +80,16 @@ export const useDocumentStore = defineStore('documentStore', () => {
 		}
 	}
 
-	async function fetchMyTasks(page: number = 1, pageSize: number = 20): Promise<PaginatedResult<DocumentResponseDto>> {
+	async function fetchMyTasks(page: number = 1, pageSize: number = 20, status?: string): Promise<PaginatedResult<DocumentResponseDto>> {
 		isLoading.value = true;
 		error.value = null;
 		try {
+			const params: { page: number; pageSize: number; status?: string } = { page, pageSize };
+			if (status) {
+				params.status = status;
+			}
 			const response = await api.get<PaginatedResult<DocumentResponseDto>>('/documents/my-tasks', {
-				params: { page, pageSize }
+				params
 			});
 			return response.data;
 		} catch (err: unknown) {

@@ -175,7 +175,7 @@ namespace GlosterIktato.API.Services
         /// <summary>
         /// Aktuális ügyeim - hozzám rendelt dokumentumok (pagination support)
         /// </summary>
-        public async Task<PaginatedResult<DocumentResponseDto>> GetMyTasksAsync(int currentUserId, int page, int pageSize)
+        public async Task<PaginatedResult<DocumentResponseDto>> GetMyTasksAsync(int currentUserId, int page, int pageSize, string? status = null)
         {
             try
             {
@@ -195,6 +195,12 @@ namespace GlosterIktato.API.Services
                     .Where(d => userCompanyIds.Contains(d.CompanyId)) // User csak saját cégeit látja
                     .Where(d => d.AssignedToUserId == currentUserId) // Alapértelmezett szűrés: AssignedToUserId = currentUser
                     .AsQueryable();
+
+                // Filter: Status
+                if (!string.IsNullOrWhiteSpace(status))
+                {
+                    query = query.Where(d => d.Status == status);
+                }
 
                 // Total count
                 var totalCount = await query.CountAsync();
