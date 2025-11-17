@@ -65,7 +65,7 @@ const router = createRouter({
 		{
 			path: '/settings',
 			name: 'settings',
-			component: LandingPage, // TODO: Replace with SettingsPage
+			component: DashboardPage, // TODO: Replace with SettingsPage
 			meta: { requiresAuth: true }
 		},
 		// Profile
@@ -141,7 +141,7 @@ router.beforeEach((to, from, next) => {
 
 router.afterEach((to) => {
 	// Update page title
-	document.title = `${to.meta?.title || 'Dashboard'} | Iktatórendszer`;
+	document.title = `${to.meta?.title || 'Összefoglaló'} | Gloster Iktatórendszer`;
 });
 
 export default router;

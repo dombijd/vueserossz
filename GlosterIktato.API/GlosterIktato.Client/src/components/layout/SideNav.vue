@@ -75,7 +75,7 @@
 				:aria-label="collapsed ? 'Expand sidebar' : 'Collapse sidebar'"
 			>
 				<font-awesome-icon :icon="['fas', 'bars']" class="h-5 w-5 shrink-0" />
-				<span v-if="!collapsed" class="truncate">Collapse</span>
+				<span v-if="!collapsed" class="truncate">Bezár</span>
 			</button>
 		</div>
 	</aside>
@@ -169,7 +169,7 @@ function filterNavItems(items: SideNavItem[]): SideNavItem[] {
 // Default navigation items
 const allNavItems: SideNavItem[] = [
 	{
-		label: 'Dashboard',
+		label: 'Összefoglaló',
 		to: '/dashboard',
 		icon: ['fas', 'home'],
 		exact: true
@@ -207,12 +207,17 @@ const allNavItems: SideNavItem[] = [
 					label: 'Szállítók',
 					to: '/suppliers',
 					icon: ['fas', 'truck']
-				}
+				},
 				// {
 				// 	label: 'Workflow',
 				// 	to: '/admin/workflow',
 				// 	icon: ['fas', 'cog']
 				// }
+				{
+					label: 'Csoportok',
+					to: '/admin/user-groups',
+					icon: ['fas', 'people-roof']
+				}
 			]
 		}
 ];

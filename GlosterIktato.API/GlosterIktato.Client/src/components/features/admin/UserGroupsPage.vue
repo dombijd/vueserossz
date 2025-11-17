@@ -18,6 +18,7 @@
 				<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
 					<BaseInput
 						v-model="searchQuery"
+						label="Név"
 						placeholder="Keresés név vagy leírás alapján..."
 					/>
 					<BaseSelect

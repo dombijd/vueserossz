@@ -3,7 +3,7 @@
 		<div class="space-y-6">
 			<!-- Header -->
 			<div class="flex items-center justify-between">
-				<h1 class="text-2xl font-semibold text-gray-900">Dashboard</h1>
+				<h1 class="text-2xl font-semibold text-gray-900">Összefoglaló</h1>
 				<BaseButton
 					variant="primary"
 					:left-icon="['fas', 'plus']"

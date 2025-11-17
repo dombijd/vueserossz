@@ -53,6 +53,7 @@ import {
   faComment,
   faArrowsRotate,
   faArchive,
+  faPeopleRoof,
 } from '@fortawesome/free-solid-svg-icons'
 
 library.add(
@@ -108,6 +109,7 @@ library.add(
   faComment,
   faArrowsRotate,
   faArchive,
+  faPeopleRoof,
 )
 
 export { FontAwesomeIcon }

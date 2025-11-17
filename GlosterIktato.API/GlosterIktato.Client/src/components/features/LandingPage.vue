@@ -7,13 +7,109 @@
 		@open-user-menu="logout"
 	>
 		<div class="space-y-4">
-			<h1 class="text-2xl font-semibold text-gray-900">Welcome</h1>
-			<p class="text-gray-600">This is a protected landing page. You are logged in as <span class="font-medium">{{ auth.userEmail }}</span>.</p>
-			<div class="flex gap-2">
-				<BaseButton variant="secondary" :left-icon="['fas','file']">New Document</BaseButton>
-				<BaseButton variant="success" :left-icon="['fas','arrow-rotate-right']">Refresh</BaseButton>
-				<BaseButton variant="danger" :left-icon="['fas','right-from-bracket']" @click="logout">Logout</BaseButton>
-			</div>
+			<h1 class="text-2xl font-semibold text-gray-900">Üdvözöllek a Gloster Iktatórendszerben, <span class="font-medium">{{ auth.userName }}</span>!</h1>
+			<div class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-3">Mi ez?</h2>
+            <p class="text-gray-700 text-lg leading-relaxed">
+                A <span class="font-semibold text-blue-600">GlosterIktato Vueserossz</span> verziója egy modern, digitális iktatórendszer, amely leegyszerűsíti a cégcsoport dokumentumainak kezelését, jóváhagyását és nyilvántartását.
+            </p>
+        </div>
+
+        <!-- Mit tudsz vele csinálni? -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-4">Mit tudsz vele csinálni?</h2>
+            
+            <div class="space-y-4">
+                <!-- Feature 1 -->
+                <div class="flex items-start gap-4 p-4 bg-blue-50 rounded-lg">
+                    <div class="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-file-upload text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-1">Dokumentumok feltöltése</h3>
+                        <p class="text-gray-600">Számlák, szerződések, igazolások egyszerű feltöltése</p>
+                    </div>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="flex items-start gap-4 p-4 bg-green-50 rounded-lg">
+                    <div class="flex-shrink-0 w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-check-circle text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-1">Jóváhagyási folyamat</h3>
+                        <p class="text-gray-600">Átlátható workflow lépésről lépésre</p>
+                    </div>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="flex items-start gap-4 p-4 bg-purple-50 rounded-lg">
+                    <div class="flex-shrink-0 w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-search text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-1">Gyors keresés</h3>
+                        <p class="text-gray-600">Bármilyen dokumentum megtalálása másodpercek alatt</p>
+                    </div>
+                </div>
+
+                <!-- Feature 4 -->
+                <div class="flex items-start gap-4 p-4 bg-orange-50 rounded-lg">
+                    <div class="flex-shrink-0 w-10 h-10 bg-orange-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-comments text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-1">Megjegyzések</h3>
+                        <p class="text-gray-600">Kollégákkal való egyszerű kommunikáció</p>
+                    </div>
+                </div>
+
+                <!-- Feature 5 -->
+                <div class="flex items-start gap-4 p-4 bg-indigo-50 rounded-lg">
+                    <div class="flex-shrink-0 w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                        <i class="fas fa-chart-bar text-white"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-1">Áttekintés</h3>
+                        <p class="text-gray-600">Minden dokumentum egy helyen, strukturáltan</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kezdés -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-semibold text-gray-900 mb-4">Kezdés</h2>
+            
+            <ol class="space-y-3">
+                <li class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">1</span>
+                    <p class="text-gray-700 pt-1">
+                        Töltsd fel az első dokumentumodat a <span class="font-semibold">"+ Új dokumentum"</span> gombbal
+                    </p>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">2</span>
+                    <p class="text-gray-700 pt-1">
+                        Nézd meg az <span class="font-semibold">"Aktuális ügyeim"</span> oldalt a rád váró feladatokhoz
+                    </p>
+                </li>
+                <li class="flex items-start gap-3">
+                    <span class="flex-shrink-0 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">3</span>
+                    <p class="text-gray-700 pt-1">
+                        Ha elakadtál, kérdezz bátran a kollégáidtól! 🚀
+                    </p>
+                </li>
+            </ol>
+        </div>
+
+        <!-- CTA Button -->
+        <div class="text-center pt-4 border-t border-gray-200">
+            <button class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-3 rounded-lg transition-colors duration-200 inline-flex items-center gap-2">
+                <span>Jó munkát!</span>
+                <i class="fas fa-arrow-right"></i>
+            </button>
+        </div>
 		</div>
 	</AppLayout>
 </template>
