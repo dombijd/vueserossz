@@ -13,6 +13,12 @@
 				</BaseButton>
 			</div>
 
+			<!-- Status Filter Tabs -->
+			<BaseTabs
+				v-model="statusFilter"
+				:tabs="statusTabs"
+			/>
+
 			<!-- Table Card -->
 			<BaseCard>
 				<BaseTable
@@ -156,17 +162,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import AppLayout from '../layout/AppLayout.vue';
 import BaseCard from '../base/BaseCard.vue';
 import BaseTable, { type TableColumn } from '../base/BaseTable.vue';
 import BaseButton from '../base/BaseButton.vue';
+import BaseTabs, { type Tab } from '../base/BaseTabs.vue';
 import StatusBadge from '../base/StatusBadge.vue';
 import { useDocumentStore } from '../../stores/documentStore';
 import type { DocumentResponseDto, PaginatedResult } from '../../types/document.types';
 import { formatDateTime } from '@/utils/date.utils';
 import { usePagination } from '@/composables/usePagination';
+import api from '@/services/api';
 
 const router = useRouter();
 const documentStore = useDocumentStore();
@@ -177,6 +185,15 @@ const pagination = ref<PaginatedResult<DocumentResponseDto> | null>(null);
 const currentPage = ref(1);
 const pageSize = ref(20);
 const selectedDocuments = ref<DocumentResponseDto[]>([]);
+const statusFilter = ref<string>('all');
+
+// Tab definitions
+const statusTabs: Tab[] = [
+	{ value: 'all', label: 'Összes', icon: ['fas', 'list'] },
+	{ value: 'Draft', label: 'Vázlat', icon: ['fas', 'file'] },
+	{ value: 'PendingApproval', label: 'Jóváhagyásra vár', icon: ['fas', 'clock'] },
+	{ value: 'Done', label: 'Kész', icon: ['fas', 'check-circle'] },
+];
 
 // Computed
 const isLoading = computed(() => documentStore.isLoading);
@@ -197,7 +214,24 @@ const { visiblePages } = usePagination(pagination);
 // Methods
 async function loadDocuments() {
 	try {
-		const result = await documentStore.fetchMyTasks(currentPage.value, pageSize.value);
+		let result;
+		if (statusFilter.value === 'all') {
+			result = await documentStore.fetchMyTasks(currentPage.value, pageSize.value);
+		} else {
+			// Call with status parameter
+			const response = await api.get<PaginatedResult<DocumentResponseDto>>(
+				'/documents/my-tasks',
+				{
+					params: {
+						page: currentPage.value,
+						pageSize: pageSize.value,
+						status: statusFilter.value
+					}
+				}
+			);
+			result = response.data;
+		}
+
 		documents.value = result?.data || [];
 		pagination.value = result;
 	} catch (error) {
@@ -225,6 +259,12 @@ function handleSelect(selectedRows: DocumentResponseDto[]) {
 function handleOpen(documentId: number) {
 	router.push(`/documents/${documentId}`);
 }
+
+// Watch status filter changes
+watch(statusFilter, () => {
+	currentPage.value = 1; // Reset to first page
+	loadDocuments();
+});
 
 // Lifecycle
 onMounted(() => {

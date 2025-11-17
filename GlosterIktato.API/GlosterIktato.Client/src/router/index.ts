@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router';
 import LoginPage from '@/components/features/LoginPage.vue';
 import LandingPage from '@/components/features/LandingPage.vue';
+import DashboardPage from '@/components/features/DashboardPage.vue';
 import DocumentUploadPage from '@/components/features/DocumentUploadPage.vue';
 import DocumentsListPage from '@/components/features/DocumentsListPage.vue';
 import DocumentDetailPage from '@/components/features/DocumentDetailPage.vue';
@@ -22,7 +23,7 @@ const router = createRouter({
 		{
 			path: '/dashboard',
 			name: 'dashboard',
-			component: LandingPage,
+			component: DashboardPage,
 			meta: { requiresAuth: true }
 		},
 		// Document routes
@@ -43,6 +44,18 @@ const router = createRouter({
 			name: 'document-detail',
 			component: DocumentDetailPage,
 			meta: { requiresAuth: true, title: 'Dokumentum karton' }
+		},
+		{
+			path: '/search',
+			name: 'search',
+			component: () => import('@/components/features/SearchPage.vue'),
+			meta: { requiresAuth: true, title: 'Dokumentum keresés' }
+		},
+		{
+			path: '/suppliers',
+			name: 'suppliers',
+			component: () => import('@/components/features/SuppliersPage.vue'),
+			meta: { requiresAuth: true, title: 'Szállítók' }
 		},
 		// Settings
 		{
