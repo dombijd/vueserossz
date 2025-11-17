@@ -131,8 +131,4 @@ appsettings.Local.json
 .env.local
 
 # Backup files
-*.bak
 *.tmp
-
-*.pdf
-Storage/
