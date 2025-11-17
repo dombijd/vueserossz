@@ -325,31 +325,16 @@ async function handleDelete() {
 
 	deleting.value = true;
 	try {
-		const response = await api.delete<CompanyDto>(`/companies/${companyToDelete.value.id}`);
+		// Backend NoContent-et ad vissza, szóval csak frissítjük a lokális állapotot
+		await api.delete(`/companies/${companyToDelete.value.id}`);
 		
-		// Debug: log the response to see what we're getting
-		console.log('Delete response:', response.data);
-		console.log('Original isActive:', companyToDelete.value.isActive);
-		
+		// Frissítjük a lokális állapotot - a cég inaktív lesz
 		const index = companies.value.findIndex(c => c.id === companyToDelete.value!.id);
 		if (index !== -1) {
-			// Always use the response data - backend returns the updated company
-			if (response.data) {
-				companies.value[index] = response.data;
-			} else {
-				// Fallback: if no response data, toggle manually
-				companies.value[index].isActive = !companies.value[index].isActive;
-			}
+			companies.value[index].isActive = false;
 		}
 		
-		// Use the response data's isActive value (backend toggles it)
-		// If response.data exists, use its isActive, otherwise use the toggled value
-		const newStatus = response.data?.isActive !== undefined 
-			? response.data.isActive 
-			: !companyToDelete.value.isActive;
-		
-		console.log('New status:', newStatus);
-		success(`Cég sikeresen ${newStatus ? 'aktiválva' : 'deaktiválva'}`);
+		success('Cég sikeresen deaktiválva');
 		cancelDelete();
 	} catch (err: any) {
 		toastError(err.response?.data?.message || 'Hiba történt a törlés során');

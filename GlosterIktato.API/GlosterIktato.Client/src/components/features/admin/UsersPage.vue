@@ -249,6 +249,7 @@ interface Role {
 interface Company {
 	id: number;
 	name: string;
+	isActive?: boolean;
 }
 
 interface UserDto {
@@ -353,7 +354,8 @@ async function loadUsers() {
 async function loadCompanies() {
 	try {
 		const response = await api.get<Company[]>('/companies');
-		companies.value = response.data;
+		// Szűrjük az aktív cégeket
+		companies.value = response.data.filter(c => c.isActive !== false);
 	} catch (err) {
 		console.error('Error loading companies:', err);
 	}

@@ -68,7 +68,8 @@ namespace GlosterIktato.API.Services
                     {
                         Id = uc.Company.Id,
                         Name = uc.Company.Name,
-                        TaxNumber = uc.Company.TaxNumber
+                        TaxNumber = uc.Company.TaxNumber,
+                        IsActive = uc.Company.IsActive
                     })
                     .ToList();
 

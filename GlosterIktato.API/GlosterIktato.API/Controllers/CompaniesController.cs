@@ -37,7 +37,8 @@ namespace GlosterIktato.API.Controllers
         {
             try
             {
-                var companies = await _companyService.GetAllCompaniesAsync();
+                // Mindig csak aktív cégeket adunk vissza
+                var companies = await _companyService.GetAllCompaniesAsync(includeInactive: false);
                 return Ok(companies);
             }
             catch (Exception ex)
