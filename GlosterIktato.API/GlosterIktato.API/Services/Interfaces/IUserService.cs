@@ -13,7 +13,9 @@ namespace GlosterIktato.API.Services.Interfaces
         Task<bool> DeactivateUserAsync(int userId, int deactivatedByUserId);
         
         // Admin methods
+        Task<bool> ActivateUserAsync(int userId, int activatedByUserId);
         Task<UserDto?> CreateUserAsync(CreateUserDto dto, int createdByUserId);
         Task<UserDto?> UpdateUserAdminAsync(int userId, UpdateUserDto dto, int modifiedByUserId);
+        Task<List<UserDto>> GetAllUsersAsync();
     }
 }
