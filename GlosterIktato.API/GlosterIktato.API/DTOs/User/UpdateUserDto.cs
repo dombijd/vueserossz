@@ -30,5 +30,13 @@ namespace GlosterIktato.API.DTOs.User
         /// </summary>
         public List<int>? CompanyIds { get; set; }
     }
+
+    // Simple DTO a request body-hoz
+    public class UpdateUserRequest
+    {
+        public string? FirstName { get; set; }
+        public string? LastName { get; set; }
+        public string? Email { get; set; }
+    }
 }
 

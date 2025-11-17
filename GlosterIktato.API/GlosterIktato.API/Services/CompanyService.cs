@@ -66,6 +66,31 @@ namespace GlosterIktato.API.Services
             }
         }
 
+        public async Task<List<CompanyDto>> GetCompaniesByUserIdAsync(int userId)
+        {
+            try
+            {
+                var companies = await _context.UserCompanies
+                    .Where(uc => uc.UserId == userId)
+                    .Select(uc => uc.Company)
+                    .Where(c => c.IsActive)
+                    .OrderBy(c => c.Name)
+                    .ToListAsync();
+
+                return companies.Select(c => new CompanyDto
+                {
+                    Id = c.Id,
+                    Name = c.Name,
+                    TaxNumber = c.TaxNumber
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error fetching companies for user {UserId}", userId);
+                throw;
+            }
+        }
+
         public async Task<CompanyDto> CreateCompanyAsync(CreateCompanyDto dto, int createdByUserId)
         {
             try
