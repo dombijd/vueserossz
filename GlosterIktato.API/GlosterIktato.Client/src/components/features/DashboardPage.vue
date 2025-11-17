@@ -46,7 +46,7 @@
 				</BaseCard>
 
 				<!-- Stat Card 3: Kész -->
-				<!-- <BaseCard>
+				<BaseCard>
 					<div class="p-4">
 						<div class="flex items-center justify-between">
 							<div>
@@ -58,7 +58,7 @@
 							</div>
 						</div>
 					</div>
-				</BaseCard> -->
+				</BaseCard>
 			</div>
 
 			<!-- Aktuális Ügyeim Widget -->

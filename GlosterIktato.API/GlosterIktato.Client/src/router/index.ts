@@ -8,6 +8,7 @@ import DocumentDetailPage from '@/components/features/DocumentDetailPage.vue';
 import SuppliersPage from '@/components/features/SuppliersPage.vue';
 import UsersPage from '@/components/features/admin/UsersPage.vue';
 import CompaniesPage from '@/components/features/admin/CompaniesPage.vue';
+import UserGroupsPage from '@/components/features/admin/UserGroupsPage.vue';
 import { useAuthStore } from '@/stores/authStore';
 
 const router = createRouter({
@@ -90,8 +91,8 @@ const router = createRouter({
 		{
 			path: '/admin/user-groups',
 			name: 'admin-user-groups',
-			component: LandingPage, // TODO: Replace with AdminUserGroupsPage
-			meta: { requiresAuth: true, requiresAdmin: true }
+			component: UserGroupsPage,
+			meta: { requiresAuth: true, requiresAdmin: true, title: 'Felhasználói Csoportok kezelése' }
 		},
 		// 404
 		{
