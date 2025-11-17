@@ -69,19 +69,20 @@ namespace GlosterIktato.API.Controllers
 
         /// <summary>
         /// Aktuális ügyeim (pagination support)
-        /// GET /api/documents/my-tasks?page=1&pageSize=20
+        /// GET /api/documents/my-tasks?page=1&pageSize=20&status=PendingApproval
         /// </summary>
         [HttpGet("my-tasks")]
         [ProducesResponseType(typeof(PaginatedResult<DocumentResponseDto>), StatusCodes.Status200OK)]
         public async Task<IActionResult> GetMyTasks(
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 20)
+            [FromQuery] int pageSize = 20,
+            [FromQuery] string? status = null)
         {
             var userId = GetCurrentUserId();
             if (userId == 0)
                 return Unauthorized();
 
-            var result = await _documentService.GetMyTasksAsync(userId, page, pageSize);
+            var result = await _documentService.GetMyTasksAsync(userId, page, pageSize, status);
             return Ok(result);
         }
 
